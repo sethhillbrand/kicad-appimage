@@ -6,7 +6,7 @@ RUN <<-EOF
     apt-get install -y build-essential cmake libbz2-dev libcairo2-dev libglu1-mesa-dev \
         libgl1-mesa-dev libglew-dev libx11-dev libwxgtk3.2-dev \
         mesa-common-dev pkg-config python3-dev python3-wxgtk4.0 \
-        libboost-all-dev libglm-dev libcurl4-openssl-dev \
+        libboost-all-dev libglm-dev libcurl4-gnutls-dev \
         libgtk-3-dev \
         libngspice0-dev \
         ngspice-dev \
@@ -122,81 +122,6 @@ COPY --from=kicad /usr/installtemp/bin /usr/bin
 COPY --from=kicad /usr/installtemp/share /usr/share
 COPY --from=kicad /usr/installtemp/lib /usr/lib
 COPY --from=kicad /usr/share/kicad /usr/share/kicad
-
-FROM debian:bookworm-slim AS runtime
-ARG USER_NAME=kicad
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
-
-LABEL org.opencontainers.image.authors='https://groups.google.com/a/kicad.org/g/devlist' \
-      org.opencontainers.image.url='https://kicad.org' \
-      org.opencontainers.image.documentation='https://docs.kicad.org/' \
-      org.opencontainers.image.source='https://gitlab.com/kicad/kicad-ci/kicad-cli-docker' \
-      org.opencontainers.image.vendor='KiCad' \
-      org.opencontainers.image.licenses='GPL-3.0-or-later' \
-      org.opencontainers.image.description='Image containing KiCad EDA, python and the stock symbol and footprint libraries for use in automation workflows'
-
-# install runtime dependencies 
-RUN <<-EOF
-    apt-get update
-    apt-get install -y libbz2-1.0 \
-        libcairo2 \
-        libglu1-mesa \
-        libglew2.2 \
-        libx11-6 \
-        libwxgtk3.2* \
-        libpython3.11 \
-        python3 \
-        python3-wxgtk4.0 \
-        python3-yaml \
-        python3-typing-extensions \
-        libcurl4 \
-        libngspice0 \
-        ngspice \
-        libocct-modeling-algorithms-7.6 \
-        libocct-modeling-data-7.6 \
-        libocct-data-exchange-7.6 \
-        libocct-visualization-7.6 \
-        libocct-foundation-7.6 \
-        libocct-ocaf-7.6 \
-        unixodbc \
-        zlib1g \
-        shared-mime-info \
-        git \
-        libgit2-1.5 \
-        libsecret-1-0 \
-        libprotobuf32 \
-        libzstd1 \
-        libnng1 \
-        sudo
-    apt-get clean autoclean
-    apt-get autoremove -y
-    rm -rf /var/lib/apt/lists/*
-EOF
-
-# Setup user
-RUN groupadd --gid $USER_GID $USER_NAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USER_NAME \
-    && usermod -aG sudo $USER_NAME \
-    && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-COPY --from=install / /
-
-# fix the linkage to libkicad_3dsg
-RUN ldconfig -l /usr/bin/_pcbnew.kiface
-
-# Copy over the lib tables to the user config directory
-RUN mkdir -p /home/$USER_NAME/.config/kicad/$(kicad-cli -v | cut -d . -f 1,2)
-
-RUN cp /usr/share/kicad/template/*-lib-table /home/$USER_NAME/.config/kicad/$(kicad-cli -v | cut -d . -f 1,2)
-
-RUN chown -R $USER_NAME:$USER_NAME /home/$USER_NAME/.config
-RUN chown -R $USER_NAME:$USER_NAME /tmp/org.kicad.kicad || true
-
-USER $USER_NAME
-
-FROM runtime AS runtime-full
-COPY --from=packages3d /usr/installtemp/share /usr/share
 
 FROM python:3.12-bookworm AS appimage-builder
 RUN <<-EOF
