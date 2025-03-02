@@ -30,7 +30,7 @@ build-docker:
         --build-arg KICAD_BUILD_MAJVERSION=9 \
         --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
         --platform linux/amd64 \
-        --target appimages -o type=local,dest=. \
+        --target appimage -o type=local,dest=. \
         -f Dockerfile .
   artifacts:
     paths:
