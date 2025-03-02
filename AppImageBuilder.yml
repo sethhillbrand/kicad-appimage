@@ -1,0 +1,103 @@
+# appimage-builder recipe see https://appimage-builder.readthedocs.io for details
+version: 1
+
+AppDir:
+  path: ./AppDir
+
+  app_info:
+    id: kicad
+    name: KiCad
+    icon: kicad
+    version: nightly
+    exec: usr/bin/kicad
+
+  apt:
+    arch: amd64
+    sources:
+      - sourceline: 'deb http://ftp.debian.org/debian/ bookworm contrib main'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0E98404D386FA1D9'
+      - sourceline: 'deb http://ftp.debian.org/debian/ bookworm-updates contrib main'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0E98404D386FA1D9'
+      - sourceline: 'deb http://security.debian.org/debian-security/ bookworm-security contrib main'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x54404762BBB6E853'
+
+    include:
+      - bash
+      - dash
+      - python3
+      - python-is-python3
+      - librsvg2-common # gdk-pixbuf
+
+      - libc6
+      - libstdc++6
+
+      # HACK: this breaks Wayland support, but GTK needs it with Wayland < 1.20, as it always links against it
+      # For now we use wxGTK without Wayland support anyway, and later we might consider removing support for Ubuntu 20.04
+      - libwayland-egl1
+      - libwayland-client0
+      - libwayland-cursor0
+
+      - libbz2-1.0
+      - libcairo2
+      - libglu1-mesa
+      - libglew2.2
+      - libx11-6
+      - libwxgtk3.2-*
+      - libpython3.11
+      - python3
+      - python3-wxgtk4.0
+      - python3-yaml
+      - python3-typing-extensions
+      - libcurl4
+      - libngspice0
+      - ngspice
+      - libocct-modeling-algorithms-7.6
+      - libocct-modeling-data-7.6
+      - libocct-data-exchange-7.6
+      - libocct-visualization-7.6
+      - libocct-foundation-7.6
+      - libocct-ocaf-7.6
+      - unixodbc
+      - zlib1g
+      - shared-mime-info
+      - git
+      - libgit2-1.5
+      - libsecret-1-0
+      - libprotobuf32
+      - libzstd1
+      - libnng1
+      - sudo
+
+    exclude:
+      - adwaita-icon-theme
+      - humanity-icon-theme
+
+  runtime:
+    version: v3.0.0-devel-2
+    # debug: true
+
+    env:
+      PATH: '${APPDIR}/usr/bin:${APPDIR}/bin:${PATH}'
+      APPDIR_LIBRARY_PATH: '${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib/X86_64:${APPDIR}/lib/x86_64:${APPDIR}/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders'
+      PYTHONHOME: '${APPDIR}/usr'
+      PYTHONPATH: '${APPDIR}/usr/lib/python3.11/site-packages'
+      XDG_DATA_DIRS: '${APPDIR}/usr/share:$XDG_DATA_DIRS'
+      KICAD_STOCK_DATA_HOME: '${APPDIR}/usr/share/kicad'
+      KICAD9_3DMODEL_DIR: '${APPDIR}/usr/share/kicad/3dmodels'
+      KICAD9_DESIGN_BLOCK_DIR: '${APPDIR}/usr/share/kicad/blocks'
+      KICAD9_FOOTPRINT_DIR: '${APPDIR}/usr/share/kicad/footprints'
+      KICAD9_SYMBOL_DIR: '${APPDIR}/usr/share/kicad/symbols'
+      KICAD9_TEMPLATE_DIR: '${APPDIR}/usr/share/kicad/template'
+
+  files:
+    exclude:
+      - usr/share/man
+      - usr/share/doc/*/README.*
+      - usr/share/doc/*/changelog.*
+      - usr/share/doc/*/NEWS.*
+      - usr/share/doc/*/TODO.*
+      - usr/include
+
+AppImage:
+  arch: x86_64
+  comp: xz
