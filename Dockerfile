@@ -231,6 +231,7 @@ EOF
 # Debug target: do not pack and compress, onle prepare AppImage contents
 FROM appimage-builder AS build-appdir
 COPY --from=install / /tmp/AppDir/
+COPY ./kicad.sh /tmp/AppDir/usr/bin/
 WORKDIR /tmp
 COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
 RUN appimage-builder --skip-appimage
@@ -240,6 +241,7 @@ COPY --from=build-appdir /tmp/AppDir /
 
 FROM appimage-builder AS build-appimage
 COPY --from=install / /tmp/AppDir/
+COPY ./kicad.sh /tmp/AppDir/usr/bin/
 WORKDIR /tmp
 COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
 RUN appimage-builder
@@ -250,6 +252,7 @@ COPY --from=build-appimage /tmp/KiCad-nightly-x86_64.AppImage /KiCad-nightly-x86
 FROM appimage-builder AS build-appimage-full
 COPY --from=install / /tmp/AppDir/
 COPY --from=packages3d /usr/installtemp/share /tmp/AppDir/usr/share
+COPY ./kicad.sh /tmp/AppDir/usr/bin/
 WORKDIR /tmp
 COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
 RUN appimage-builder

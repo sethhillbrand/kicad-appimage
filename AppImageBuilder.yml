@@ -9,7 +9,7 @@ AppDir:
     name: KiCad
     icon: kicad
     version: nightly
-    exec: usr/bin/kicad
+    exec: usr/bin/kicad.sh
 
   apt:
     arch: amd64
