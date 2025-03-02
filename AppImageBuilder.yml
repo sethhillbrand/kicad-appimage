@@ -8,7 +8,7 @@ AppDir:
     id: kicad
     name: KiCad
     icon: kicad
-    version: nightly
+    version: ${KICAD_BUILD_RELEASE}
     exec: usr/bin/kicad.sh
 
   apt:
@@ -71,18 +71,18 @@ AppDir:
 
   runtime:
     version: v3.0.0-devel-2
-    # debug: true
+    debug: ${KICAD_BUILD_DEBUG}
 
     env:
       APPDIR_LIBRARY_PATH: '${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib/X86_64:${APPDIR}/lib/x86_64:${APPDIR}/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders'
       PYTHONPATH: '${APPDIR}/usr/lib/python3.11/site-packages'
       XDG_DATA_DIRS: '${APPDIR}/usr/share:$XDG_DATA_DIRS'
       KICAD_STOCK_DATA_HOME: '${APPDIR}/usr/share/kicad'
-      KICAD9_3DMODEL_DIR: '${APPDIR}/usr/share/kicad/3dmodels'
-      KICAD9_DESIGN_BLOCK_DIR: '${APPDIR}/usr/share/kicad/blocks'
-      KICAD9_FOOTPRINT_DIR: '${APPDIR}/usr/share/kicad/footprints'
-      KICAD9_SYMBOL_DIR: '${APPDIR}/usr/share/kicad/symbols'
-      KICAD9_TEMPLATE_DIR: '${APPDIR}/usr/share/kicad/template'
+      KICAD${KICAD_BUILD_MAJVERSION}_3DMODEL_DIR: '${APPDIR}/usr/share/kicad/3dmodels'
+      KICAD${KICAD_BUILD_MAJVERSION}_DESIGN_BLOCK_DIR: '${APPDIR}/usr/share/kicad/blocks'
+      KICAD${KICAD_BUILD_MAJVERSION}_FOOTPRINT_DIR: '${APPDIR}/usr/share/kicad/footprints'
+      KICAD${KICAD_BUILD_MAJVERSION}_SYMBOL_DIR: '${APPDIR}/usr/share/kicad/symbols'
+      KICAD${KICAD_BUILD_MAJVERSION}_TEMPLATE_DIR: '${APPDIR}/usr/share/kicad/template'
 
   files:
     exclude:

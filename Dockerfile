@@ -1,3 +1,7 @@
+ARG KICAD_BUILD_DEBUG=false
+ARG KICAD_BUILD_MAJVERSION=9
+ARG KICAD_BUILD_RELEASE=nightly
+
 FROM debian:bookworm AS build-dependencies
 
 # install build dependencies and clean apt cache
@@ -159,7 +163,10 @@ COPY --from=install / /tmp/AppDir/
 COPY ./kicad.sh /tmp/AppDir/usr/bin/
 WORKDIR /tmp
 COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
-RUN appimage-builder --skip-appimage
+ARG KICAD_BUILD_DEBUG
+ARG KICAD_BUILD_MAJVERSION
+ARG KICAD_BUILD_RELEASE
+RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder --skip-appimage
 
 FROM scratch AS appdir
 COPY --from=build-appdir /tmp/AppDir /
@@ -169,10 +176,14 @@ COPY --from=install / /tmp/AppDir/
 COPY ./kicad.sh /tmp/AppDir/usr/bin/
 WORKDIR /tmp
 COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
-RUN appimage-builder
+ARG KICAD_BUILD_DEBUG
+ARG KICAD_BUILD_MAJVERSION
+ARG KICAD_BUILD_RELEASE
+RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder
 
 FROM scratch AS appimage
-COPY --from=build-appimage /tmp/KiCad-nightly-x86_64.AppImage /KiCad-nightly-x86_64.AppImage
+ARG KICAD_BUILD_RELEASE
+COPY --from=build-appimage /tmp/KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage /KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage
 
 FROM appimage-builder AS build-appimage-full
 COPY --from=install / /tmp/AppDir/
@@ -180,7 +191,11 @@ COPY --from=packages3d /usr/installtemp/share /tmp/AppDir/usr/share
 COPY ./kicad.sh /tmp/AppDir/usr/bin/
 WORKDIR /tmp
 COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
-RUN appimage-builder
+ARG KICAD_BUILD_DEBUG
+ARG KICAD_BUILD_MAJVERSION
+ARG KICAD_BUILD_RELEASE
+RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder
 
 FROM scratch AS appimage-full
-COPY --from=build-appimage-full /tmp/KiCad-nightly-x86_64.AppImage /KiCad-full-nightly-x86_64.AppImage
+ARG KICAD_BUILD_RELEASE
+COPY --from=build-appimage-full /tmp/KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage /KiCad-full-${KICAD_BUILD_RELEASE}-x86_64.AppImage
