@@ -1,6 +1,7 @@
 ARG KICAD_BUILD_DEBUG=false
 ARG KICAD_BUILD_MAJVERSION=9
 ARG KICAD_BUILD_RELEASE=nightly
+ARG KICAD_CMAKE_OPTIONS="-DKICAD_SCRIPTING_WXPYTHON=ON -DKICAD_USE_OCC=ON -DKICAD_SPICE=ON -DKICAD_BUILD_I18N=ON -DCMAKE_INSTALL_PREFIX=/usr -DKICAD_USE_CMAKE_FINDPROTOBUF=ON"
 
 FROM debian:bookworm AS build-dependencies
 
@@ -78,6 +79,7 @@ COPY --from=build-packages3d /usr/installtemp /usr/installtemp
 
 FROM build-dependencies AS build-kicad
 COPY --from=kicad-src . /src
+ARG KICAD_CMAKE_OPTIONS
 # We want the built install prefix in /usr to match normal system installed software
 # However to aid in docker copying only our files, we redirect the prefix in the cmake install
 # config
@@ -88,12 +90,7 @@ RUN <<-EOF
     cmake \
       -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
-      -DKICAD_SCRIPTING_WXPYTHON=ON \
-      -DKICAD_USE_OCC=ON \
-      -DKICAD_SPICE=ON \
-      -DKICAD_BUILD_I18N=ON \
-      -DCMAKE_INSTALL_PREFIX=/usr \
-      -DKICAD_USE_CMAKE_FINDPROTOBUF=ON \
+      ${KICAD_CMAKE_OPTIONS} \
       ../..
 EOF
 
