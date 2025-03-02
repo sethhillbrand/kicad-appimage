@@ -196,3 +196,7 @@ RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_
 FROM scratch AS appimage-full
 ARG KICAD_BUILD_RELEASE
 COPY --from=build-appimage-full /tmp/KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage /KiCad-full-${KICAD_BUILD_RELEASE}-x86_64.AppImage
+
+# Both AppImages for release
+FROM appimage-full AS appimages
+COPY --from=appimage / /

@@ -1,0 +1,37 @@
+stages:
+  - build
+
+build-docker:
+  tags:
+    - kicad-dind
+  stage: build
+  image: docker:28
+  services:
+    - docker:28-dind
+  script:
+    - git clone --depth=1 https://gitlab.com/kicad/code/kicad.git
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git
+    - |
+      git clone https://github.com/dsseng/appimage-builder.git && \
+      git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout e495528de01809c848d523b9478d393ced034e8e
+    - |
+      docker buildx build \
+        --progress=plain \
+        --build-context kicad-src=kicad \
+        --build-context symbols-src=kicad-symbols \
+        --build-context footprints-src=kicad-footprints \
+        --build-context templates-src=kicad-templates \
+        --build-context packages3d-src=kicad-packages3D \
+        --build-context appimage-builder-src=appimage-builder \
+        --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
+        --build-arg KICAD_BUILD_MAJVERSION=9 \
+        --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
+        --platform linux/amd64 \
+        --target appimages -o type=local,dest=. \
+        -f Dockerfile .
+  artifacts:
+    paths:
+      - ./*.AppImage
