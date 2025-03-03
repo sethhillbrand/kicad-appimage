@@ -58,22 +58,26 @@ COPY --chmod=755 <<-'EOF' /build-library.sh
 EOF
 
 FROM build-dependencies AS build-symbols
-RUN --mount=from=symbols-src,target=/src /build-library.sh
+COPY --from=symbols-src . /src
+RUN /build-library.sh
 FROM scratch AS symbols
 COPY --from=build-symbols /usr/installtemp /usr/installtemp
 
 FROM build-dependencies AS build-footprints
-RUN --mount=from=footprints-src,target=/src /build-library.sh
+COPY --from=footprints-src . /src
+RUN /build-library.sh
 FROM scratch AS footprints
 COPY --from=build-footprints /usr/installtemp /usr/installtemp
 
 FROM build-dependencies AS build-templates
-RUN --mount=from=templates-src,target=/src /build-library.sh
+COPY --from=templates-src . src
+RUN /build-library.sh
 FROM scratch AS templates
 COPY --from=build-templates /usr/installtemp /usr/installtemp
 
 FROM build-dependencies AS build-packages3d
-RUN --mount=from=packages3d-src,target=/src /build-library.sh
+COPY --from=packages3d-src . /src
+RUN /build-library.sh
 FROM scratch AS packages3d
 COPY --from=build-packages3d /usr/installtemp /usr/installtemp
 
