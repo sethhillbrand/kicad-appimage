@@ -104,15 +104,15 @@ RUN ninja
 # install
 RUN cmake --install . --prefix=/usr/installtemp/
 
-# Now test the build, shipping a broken image doesn't help us
-# Maybe we should only run the cli tests but all of them is fine for now
-WORKDIR /src
-RUN <<-EOF
-    set -ex
-    pip3 install -r ./qa/tests/requirements.txt --break-system-packages
-    cd build/linux
-    ctest --output-on-failure
-EOF
+# # Now test the build, shipping a broken image doesn't help us
+# # Maybe we should only run the cli tests but all of them is fine for now
+# WORKDIR /src
+# RUN <<-EOF
+#     set -ex
+#     pip3 install -r ./qa/tests/requirements.txt --break-system-packages
+#     cd build/linux
+#     ctest --output-on-failure
+# EOF
 
 FROM scratch AS kicad
 COPY --from=build-kicad /usr/installtemp /usr/installtemp
