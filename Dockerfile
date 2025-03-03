@@ -9,8 +9,8 @@ FROM debian:bookworm AS build-dependencies
 RUN <<-EOF
     apt-get update
     apt-get install -y build-essential cmake libbz2-dev libcairo2-dev libglu1-mesa-dev \
-        libgl1-mesa-dev libglew-dev libx11-dev libwxgtk3.2-dev \
-        mesa-common-dev pkg-config python3-dev python3-wxgtk4.0 \
+        libgl1-mesa-dev libglew-dev libx11-dev \
+        mesa-common-dev pkg-config python3-dev \
         libboost-all-dev libglm-dev libcurl4-gnutls-dev \
         libgtk-3-dev \
         libngspice0-dev \
@@ -36,7 +36,8 @@ RUN <<-EOF
         python3-pip \
         python3-venv \
         protobuf-compiler \
-        libzstd-dev
+        libzstd-dev \
+        python-is-python3
     apt-get clean autoclean
     apt-get autoremove -y
     rm -rf /var/lib/apt/lists/*
@@ -56,6 +57,35 @@ COPY --chmod=755 <<-'EOF' /build-library.sh
     ninja
     cmake --install . --prefix=/usr/installtemp/
 EOF
+
+FROM build-dependencies AS build-wx
+ADD https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.tar.bz2 /tmp/wxWidgets.tar.bz2
+WORKDIR /tmp
+RUN <<-EOF
+    mkdir wxWidgets
+    tar xjf wxWidgets.tar.bz2 -C wxWidgets --strip-components=1
+    cd wxWidgets
+    cmake -G Ninja -B builddir -DCMAKE_INSTALL_PREFIX=/usr -DwxBUILD_TOOLKIT=gtk3 -DwxUSE_OPENGL=ON -DwxUSE_GLCANVAS_EGL=OFF
+EOF
+WORKDIR /tmp/wxWidgets
+RUN ninja -C builddir
+RUN DESTDIR=/tmp/rootfs cmake --install builddir
+FROM scratch AS wx
+COPY --from=build-wx /tmp/rootfs /
+
+FROM build-dependencies AS build-wxpython
+COPY --from=wx / /
+ADD https://github.com/wxWidgets/Phoenix/releases/download/wxPython-4.2.2/wxPython-4.2.2.tar.gz /tmp/wxPython.tar.gz
+WORKDIR /tmp
+RUN <<-EOF
+    mkdir wxPython
+    tar xzf wxPython.tar.gz -C wxPython --strip-components=1
+EOF
+WORKDIR /tmp/wxPython
+RUN python build.py build --use_syswx --prefix=/usr
+RUN python build.py install --destdir=/tmp/rootfs
+FROM scratch AS wxpython
+COPY --from=build-wxpython /tmp/rootfs/usr/local /usr
 
 FROM build-dependencies AS build-symbols
 COPY --from=symbols-src . /src
@@ -82,6 +112,8 @@ FROM scratch AS packages3d
 COPY --from=build-packages3d /usr/installtemp /usr/installtemp
 
 FROM build-dependencies AS build-kicad
+COPY --from=wx / /
+COPY --from=wxpython / /
 COPY --from=kicad-src . /src
 ARG KICAD_CMAKE_OPTIONS
 # We want the built install prefix in /usr to match normal system installed software
@@ -120,6 +152,8 @@ COPY --from=build-kicad /usr/share/kicad /usr/share/kicad
 
 # Everything except 3D models
 FROM scratch AS install
+COPY --from=wx / /
+COPY --from=wxpython / /
 COPY --from=symbols /usr/installtemp/share /usr/share
 COPY --from=footprints /usr/installtemp/share /usr/share
 COPY --from=templates /usr/installtemp/share /usr/share

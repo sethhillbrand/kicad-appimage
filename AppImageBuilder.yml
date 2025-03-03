@@ -29,19 +29,43 @@ AppDir:
       - librsvg2-common # gdk-pixbuf
 
       # HACK: this breaks Wayland support, but GTK needs it with Wayland < 1.20, as it always links against it
-      # For now we use wxGTK without Wayland support anyway, and later we might consider removing support for Ubuntu 20.04
+      # For now we do not consider Wayland support as it's WIP in KiCad, and later we might consider removing support for Ubuntu 20.04
       - libwayland-egl1
       - libwayland-client0
       - libwayland-cursor0
+
+      # Dependencies of wxGTK and wxPython we provide in the AppDir
+      # python3-wxgtk4.0
+      - python3-pil
+      - python3-six
+      - python3-numpy
+      - libgcc-s1
+      # libwxgtk-gl3.2-1
+      - libglib2.0-0
+      - libgtk-3-0
+      # libwxgtk3.2-1
+      - libcairo2
+      - libfontconfig1
+      - libgdk-pixbuf-2.0-0
+      - libjpeg62-turbo
+      - libnotify4
+      - libpango-1.0-0
+      - libpangocairo-1.0-0
+      - libpangoft2-1.0-0
+      - libpng16-16
+      - libsm6
+      - libtiff6
+      - libxtst6
+      # libwxbase3.2-1
+      - libexpat1
+      - libpcre2-32-0
 
       - libbz2-1.0
       - libcairo2
       - libglu1-mesa
       - libglew2.2
-      - libwxgtk3.2-*
       - libpython3.11
       - python3
-      - python3-wxgtk4.0
       - python3-yaml
       - python3-typing-extensions
       - libcurl4-gnutls-dev
