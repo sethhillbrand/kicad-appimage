@@ -191,8 +191,8 @@ RUN <<-EOF
     python3 -m pip install --break-system-packages /tmp/appimage-builder
     rm -rf /tmp/appimage-builder
 EOF
+ADD https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage /tmp/appimagetool-x86_64.AppImage
 
-# Debug target: do not pack and compress, onle prepare AppImage contents
 FROM appimage-builder AS build-appdir
 COPY --from=install / /tmp/AppDir/
 COPY ./kicad.sh /tmp/AppDir/usr/bin/
@@ -204,23 +204,9 @@ ARG KICAD_BUILD_RELEASE
 RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder --skip-appimage
 
 FROM scratch AS appdir
-COPY --from=build-appdir /tmp/AppDir /
+COPY --from=build-appdir /tmp/AppDir /AppDir
 
-FROM appimage-builder AS build-appimage
-COPY --from=install / /tmp/AppDir/
-COPY ./kicad.sh /tmp/AppDir/usr/bin/
-WORKDIR /tmp
-COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
-ARG KICAD_BUILD_DEBUG
-ARG KICAD_BUILD_MAJVERSION
-ARG KICAD_BUILD_RELEASE
-RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder
-
-FROM scratch AS appimage
-ARG KICAD_BUILD_RELEASE
-COPY --from=build-appimage /tmp/KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage /KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage
-
-FROM appimage-builder AS build-appimage-full
+FROM appimage-builder AS build-appdir-full
 COPY --from=install / /tmp/AppDir/
 COPY --from=packages3d /usr/installtemp/share /tmp/AppDir/usr/share
 COPY ./kicad.sh /tmp/AppDir/usr/bin/
@@ -229,11 +215,26 @@ COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
 ARG KICAD_BUILD_DEBUG
 ARG KICAD_BUILD_MAJVERSION
 ARG KICAD_BUILD_RELEASE
-RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder
+RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder --skip-appimage
+
+FROM scratch AS appdir-full
+COPY --from=build-appdir-full /tmp/AppDir /AppDir
+
+FROM appimage-builder AS build-appimage
+COPY --from=appdir /AppDir /tmp/AppDir
+RUN /tmp/appimagetool-x86_64.AppImage --appimage-extract-and-run -l -g -v --comp zstd /tmp/AppDir /tmp/KiCad-x86_64.AppImage
+
+FROM scratch AS appimage
+ARG KICAD_BUILD_RELEASE
+COPY --from=build-appimage /tmp/KiCad-x86_64.AppImage /KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage
+
+FROM appimage-builder AS build-appimage-full
+COPY --from=appdir-full /AppDir /tmp/AppDir
+RUN /tmp/appimagetool-x86_64.AppImage --appimage-extract-and-run -l -g -v --comp zstd /tmp/AppDir /tmp/KiCad-x86_64.AppImage
 
 FROM scratch AS appimage-full
 ARG KICAD_BUILD_RELEASE
-COPY --from=build-appimage-full /tmp/KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage /KiCad-full-${KICAD_BUILD_RELEASE}-x86_64.AppImage
+COPY --from=build-appimage-full /tmp/KiCad-x86_64.AppImage /KiCad-full-${KICAD_BUILD_RELEASE}-x86_64.AppImage
 
 # Both AppImages for release
 FROM appimage-full AS appimages
