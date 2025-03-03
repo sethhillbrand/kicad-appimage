@@ -1,0 +1,123 @@
+# appimage-builder recipe see https://appimage-builder.readthedocs.io for details
+version: 1
+
+AppDir:
+  path: ./AppDir
+
+  app_info:
+    id: kicad
+    name: KiCad
+    icon: kicad
+    version: ${KICAD_BUILD_RELEASE}
+    exec: usr/bin/kicad.sh
+
+  apt:
+    arch: amd64
+    sources:
+      - sourceline: 'deb http://ftp.debian.org/debian/ bookworm contrib main'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0E98404D386FA1D9'
+      - sourceline: 'deb http://ftp.debian.org/debian/ bookworm-updates contrib main'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0E98404D386FA1D9'
+      - sourceline: 'deb http://security.debian.org/debian-security/ bookworm-security contrib main'
+        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x54404762BBB6E853'
+
+    include:
+      - bash
+      - dash
+      - python3
+      - python-is-python3
+      - librsvg2-common # gdk-pixbuf
+
+      # HACK: this breaks Wayland support, but GTK needs it with Wayland < 1.20, as it always links against it
+      # For now we do not consider Wayland support as it's WIP in KiCad, and later we might consider removing support for Ubuntu 20.04
+      - libwayland-egl1
+      - libwayland-client0
+      - libwayland-cursor0
+
+      # Dependencies of wxGTK and wxPython we provide in the AppDir
+      # python3-wxgtk4.0
+      - python3-pil
+      - python3-six
+      - python3-numpy
+      - libgcc-s1
+      # libwxgtk-gl3.2-1
+      - libglib2.0-0
+      - libgtk-3-0
+      # libwxgtk3.2-1
+      - libcairo2
+      - libfontconfig1
+      - libgdk-pixbuf-2.0-0
+      - libjpeg62-turbo
+      - libnotify4
+      - libpango-1.0-0
+      - libpangocairo-1.0-0
+      - libpangoft2-1.0-0
+      - libpng16-16
+      - libsm6
+      - libtiff6
+      - libxtst6
+      # libwxbase3.2-1
+      - libexpat1
+      - libpcre2-32-0
+
+      - libbz2-1.0
+      - libcairo2
+      - libglu1-mesa
+      - libglew2.2
+      - libpython3.11
+      - python3
+      - python3-yaml
+      - python3-typing-extensions
+      - libcurl4-gnutls-dev
+      - libngspice0
+      - ngspice
+      - libocct-modeling-algorithms-7.6
+      - libocct-modeling-data-7.6
+      - libocct-data-exchange-7.6
+      - libocct-visualization-7.6
+      - libocct-foundation-7.6
+      - libocct-ocaf-7.6
+      - unixodbc
+      - zlib1g
+      - shared-mime-info
+      - git
+      - libgit2-1.5
+      - libsecret-1-0
+      - libprotobuf32
+      - libzstd1
+      - libnng1
+      - sudo
+
+    exclude:
+      - adwaita-icon-theme
+      - humanity-icon-theme
+      - libopengl0
+
+  runtime:
+    version: v3.0.0-devel-2
+    debug: ${KICAD_BUILD_DEBUG}
+
+    env:
+      APPDIR_LIBRARY_PATH: '${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib/X86_64:${APPDIR}/lib/x86_64:${APPDIR}/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders'
+      PYTHONPATH: '${APPDIR}/usr/lib/python3.11/site-packages'
+      XDG_DATA_DIRS: '${APPDIR}/usr/share:$XDG_DATA_DIRS'
+      KICAD_STOCK_DATA_HOME: '${APPDIR}/usr/share/kicad'
+      KICAD${KICAD_BUILD_MAJVERSION}_3DMODEL_DIR: '${APPDIR}/usr/share/kicad/3dmodels'
+      KICAD${KICAD_BUILD_MAJVERSION}_DESIGN_BLOCK_DIR: '${APPDIR}/usr/share/kicad/blocks'
+      KICAD${KICAD_BUILD_MAJVERSION}_FOOTPRINT_DIR: '${APPDIR}/usr/share/kicad/footprints'
+      KICAD${KICAD_BUILD_MAJVERSION}_SYMBOL_DIR: '${APPDIR}/usr/share/kicad/symbols'
+      KICAD${KICAD_BUILD_MAJVERSION}_TEMPLATE_DIR: '${APPDIR}/usr/share/kicad/template'
+
+  files:
+    exclude:
+      - usr/share/man
+      - usr/share/doc/*/README.*
+      - usr/share/doc/*/changelog.*
+      - usr/share/doc/*/NEWS.*
+      - usr/share/doc/*/TODO.*
+      - usr/include
+
+AppImage:
+  arch: x86_64
+  update-information: guess
+  comp: xz
