@@ -1,26 +1,20 @@
 ARG KICAD_BUILD_DEBUG=false
 ARG KICAD_BUILD_MAJVERSION=9
 ARG KICAD_BUILD_RELEASE=nightly
-ARG KICAD_CMAKE_OPTIONS="-DKICAD_SCRIPTING_WXPYTHON=ON -DKICAD_USE_OCC=ON -DKICAD_SPICE=ON -DKICAD_BUILD_I18N=ON -DCMAKE_INSTALL_PREFIX=/usr -DKICAD_USE_CMAKE_FINDPROTOBUF=ON"
+ARG KICAD_CMAKE_OPTIONS="-DKICAD_SCRIPTING_WXPYTHON=ON -DKICAD_BUILD_I18N=ON -DCMAKE_INSTALL_PREFIX=/usr -DKICAD_USE_CMAKE_FINDPROTOBUF=ON"
 
 FROM debian:bookworm AS build-dependencies
 
 # install build dependencies and clean apt cache
 RUN <<-EOF
     apt-get update
-    apt-get install -y build-essential cmake libbz2-dev libcairo2-dev libglu1-mesa-dev \
+    apt-get install -t bookworm-backports -y build-essential \
+        bison cmake autoconf automake \
+        libbz2-dev libcairo2-dev libglu1-mesa-dev \
         libgl1-mesa-dev libglew-dev libx11-dev \
         mesa-common-dev pkg-config python3-dev \
         libboost-all-dev libglm-dev libcurl4-gnutls-dev \
         libgtk-3-dev \
-        libngspice0-dev \
-        ngspice-dev \
-        libocct-modeling-algorithms-dev \
-        libocct-modeling-data-dev \
-        libocct-data-exchange-dev \
-        libocct-visualization-dev \
-        libocct-foundation-dev \
-        libocct-ocaf-dev \
         unixodbc-dev \
         zlib1g-dev \
         shared-mime-info \
@@ -57,6 +51,40 @@ COPY --chmod=755 <<-'EOF' /build-library.sh
     ninja
     cmake --install . --prefix=/usr/installtemp/
 EOF
+
+FROM build-dependencies AS build-ngspice
+COPY --from=ngspice-src . /tmp/ngspice
+WORKDIR /tmp/ngspice
+RUN <<-EOF
+    ./autogen.sh
+    ./configure --prefix=/usr --with-ngshared --enable-xspice --enable-cider \
+    --disable-debug --disable-openmp
+EOF
+RUN make install DESTDIR=/tmp/rootfs
+FROM scratch AS ngspice
+COPY --from=build-ngspice /tmp/rootfs /
+
+FROM build-dependencies AS build-occt
+COPY --from=occt-src . /tmp/occt
+WORKDIR /tmp/occt
+RUN <<-EOF
+    mkdir build
+    cd build
+    cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFREETYPE_INCLUDE_DIR=/usr/include/freetype2 \
+    -DINSTALL_CMAKE_DATA_DIR:PATH=lib/x86_64/opencascade \
+	-DINSTALL_DIR_LIB:PATH=lib/x86_64 \
+	-DINSTALL_DIR_CMAKE:PATH=lib/x86_64/cmake/opencascade \
+	-DUSE_RAPIDJSON:BOOL=ON \
+	-DUSE_TBB:BOOL=ON \
+	-DUSE_VTK:BOOL=OFF \
+	-DUSE_FREEIMAGE:BOOL=ON \
+	-DBUILD_RELEASE_DISABLE_EXCEPTIONS:BOOL=ON \
+	-DCMAKE_BUILD_TYPE=RelWithDebInfo
+EOF
+RUN ninja -C build
+RUN DESTDIR=/tmp/rootfs cmake --install build
+FROM scratch AS occt
+COPY --from=build-occt /tmp/rootfs /
 
 FROM build-dependencies AS build-wx
 ADD https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.tar.bz2 /tmp/wxWidgets.tar.bz2
@@ -154,6 +182,8 @@ COPY --from=build-kicad /usr/share/kicad /usr/share/kicad
 FROM scratch AS install
 COPY --from=wx / /
 COPY --from=wxpython / /
+COPY --from=ngspice /usr /usr
+COPY --from=occt /usr /usr
 COPY --from=symbols /usr/installtemp/share /usr/share
 COPY --from=footprints /usr/installtemp/share /usr/share
 COPY --from=templates /usr/installtemp/share /usr/share
