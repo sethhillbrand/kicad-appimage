@@ -69,14 +69,6 @@ AppDir:
       - python3-yaml
       - python3-typing-extensions
       - libcurl4-gnutls-dev
-      - libngspice0
-      - ngspice
-      - libocct-modeling-algorithms-7.6
-      - libocct-modeling-data-7.6
-      - libocct-data-exchange-7.6
-      - libocct-visualization-7.6
-      - libocct-foundation-7.6
-      - libocct-ocaf-7.6
       - unixodbc
       - zlib1g
       - shared-mime-info
@@ -111,11 +103,10 @@ AppDir:
   files:
     exclude:
       - usr/share/man
-      - usr/share/doc/*/README.*
-      - usr/share/doc/*/changelog.*
-      - usr/share/doc/*/NEWS.*
-      - usr/share/doc/*/TODO.*
+      - usr/share/doc
       - usr/include
+      - usr/share/opencascade/data
+      - usr/share/opencascade/samples
 
 AppImage:
   arch: x86_64

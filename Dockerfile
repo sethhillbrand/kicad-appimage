@@ -1,19 +1,24 @@
 ARG KICAD_BUILD_DEBUG=false
 ARG KICAD_BUILD_MAJVERSION=9
 ARG KICAD_BUILD_RELEASE=nightly
-ARG KICAD_CMAKE_OPTIONS="-DKICAD_SCRIPTING_WXPYTHON=ON -DKICAD_BUILD_I18N=ON -DCMAKE_INSTALL_PREFIX=/usr -DKICAD_USE_CMAKE_FINDPROTOBUF=ON"
+ARG KICAD_CMAKE_OPTIONS="-DKICAD_SCRIPTING_WXPYTHON=ON \
+                         -DKICAD_BUILD_I18N=ON \
+                         -DCMAKE_INSTALL_PREFIX=/usr \
+                         -DKICAD_USE_CMAKE_FINDPROTOBUF=ON \
+                         -DOCC_LIBRARY_DIR=/usr/lib/x86_64"
 
 FROM debian:bookworm AS build-dependencies
 
 # install build dependencies and clean apt cache
 RUN <<-EOF
     apt-get update
-    apt-get install -t bookworm-backports -y build-essential \
-        bison cmake autoconf automake \
+    apt-get install -y build-essential \
+        bison cmake autoconf automake flex \
         libbz2-dev libcairo2-dev libglu1-mesa-dev \
         libgl1-mesa-dev libglew-dev libx11-dev \
         mesa-common-dev pkg-config python3-dev \
         libboost-all-dev libglm-dev libcurl4-gnutls-dev \
+        libtbb-dev \
         libgtk-3-dev \
         unixodbc-dev \
         zlib1g-dev \
@@ -31,7 +36,16 @@ RUN <<-EOF
         python3-venv \
         protobuf-compiler \
         libzstd-dev \
-        python-is-python3
+        python-is-python3 \
+        libfreeimage-dev \
+        libfreetype-dev \
+        libtbb-dev \
+        libxext-dev \
+        libxi-dev \
+        libxmu-dev \
+        rapidjson-dev \
+        tcl-dev \
+        tk-dev
     apt-get clean autoclean
     apt-get autoremove -y
     rm -rf /var/lib/apt/lists/*
@@ -70,16 +84,23 @@ WORKDIR /tmp/occt
 RUN <<-EOF
     mkdir build
     cd build
-    cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFREETYPE_INCLUDE_DIR=/usr/include/freetype2 \
+    cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release \
+    -DFREETYPE_INCLUDE_DIR=/usr/include/freetype2 \
     -DINSTALL_CMAKE_DATA_DIR:PATH=lib/x86_64/opencascade \
 	-DINSTALL_DIR_LIB:PATH=lib/x86_64 \
 	-DINSTALL_DIR_CMAKE:PATH=lib/x86_64/cmake/opencascade \
 	-DUSE_RAPIDJSON:BOOL=ON \
 	-DUSE_TBB:BOOL=ON \
+    -D3RDPARTY_TBB_LIBRARY_DIR:PATH=/usr/lib/x86_64-linux-gnu \
+    -D3RDPARTY_TBBMALLOC_LIBRARY_DIR:PATH=/usr/lib/x86_64-linux-gnu \
 	-DUSE_VTK:BOOL=OFF \
+    -DUSE_TK:BOOL=OFF \
 	-DUSE_FREEIMAGE:BOOL=ON \
 	-DBUILD_RELEASE_DISABLE_EXCEPTIONS:BOOL=ON \
-	-DCMAKE_BUILD_TYPE=RelWithDebInfo
+    -DBUILD_MODULE_Draw:BOOL=OFF \
+    -DBUILD_MODULE_Visualization:BOOL=OFF \
+	-DCMAKE_BUILD_TYPE=Release \
+    .. \
 EOF
 RUN ninja -C build
 RUN DESTDIR=/tmp/rootfs cmake --install build
@@ -93,7 +114,9 @@ RUN <<-EOF
     mkdir wxWidgets
     tar xjf wxWidgets.tar.bz2 -C wxWidgets --strip-components=1
     cd wxWidgets
-    cmake -G Ninja -B builddir -DCMAKE_INSTALL_PREFIX=/usr -DwxBUILD_TOOLKIT=gtk3 -DwxUSE_OPENGL=ON -DwxUSE_GLCANVAS_EGL=OFF
+    cmake -G Ninja -B builddir -DCMAKE_INSTALL_PREFIX=/usr \
+          -DwxBUILD_TOOLKIT=gtk3 -DwxUSE_OPENGL=ON \
+          -DwxUSE_GLCANVAS_EGL=OFF
 EOF
 WORKDIR /tmp/wxWidgets
 RUN ninja -C builddir
@@ -142,6 +165,8 @@ COPY --from=build-templates /usr/installtemp /usr/installtemp
 FROM build-dependencies AS build-kicad
 COPY --from=wx / /
 COPY --from=wxpython / /
+COPY --from=ngspice / /
+COPY --from=occt / /
 COPY --from=kicad-src . /src
 ARG KICAD_CMAKE_OPTIONS
 # We want the built install prefix in /usr to match normal system installed software
@@ -153,7 +178,7 @@ RUN <<-EOF
     cd /src/build/linux
     cmake \
       -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       ${KICAD_CMAKE_OPTIONS} \
       ../..
 EOF
