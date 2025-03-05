@@ -1,3 +1,7 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule"'
+
 stages:
   - build
 
@@ -8,15 +12,22 @@ build-docker:
   image: docker:28
   services:
     - docker:28-dind
+  before_script:
+    - apk update && apk add --no-cache patch
   script:
     - git clone --depth=1 https://gitlab.com/kicad/code/kicad.git
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git
     # - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git
+    - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=ngspice-44.2
+    - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=V7_8_0
+    - patch -d OCCT -p1 < ./patch/0001-occt-tbb-1.diff
+
+    # Use Dmitrii's fork of appimage-builder until the fix is merged
     - |
-      git clone https://github.com/dsseng/appimage-builder.git && \
-      git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout e495528de01809c848d523b9478d393ced034e8e
+      git clone https://github.com/sethhillbrand/appimage-builder.git && \
+      git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse
     - |
       # --build-context packages3d-src=kicad-packages3D
       docker buildx build \
@@ -25,6 +36,8 @@ build-docker:
         --build-context symbols-src=kicad-symbols \
         --build-context footprints-src=kicad-footprints \
         --build-context templates-src=kicad-templates \
+        --build-context ngspice-src=ngspice \
+        --build-context occt-src=OCCT \
         --build-context appimage-builder-src=appimage-builder \
         --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
         --build-arg KICAD_BUILD_MAJVERSION=9 \
