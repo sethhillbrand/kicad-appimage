@@ -74,7 +74,7 @@ RUN <<-EOF
     ./configure --prefix=/usr --with-ngshared --enable-xspice --enable-cider \
     --disable-debug --disable-openmp
 EOF
-RUN make install DESTDIR=/tmp/rootfs
+RUN make install -j $(nproc) DESTDIR=/tmp/rootfs
 FROM scratch AS ngspice
 COPY --from=build-ngspice /tmp/rootfs /
 
@@ -178,7 +178,7 @@ RUN <<-EOF
     cd /src/build/linux
     cmake \
       -G Ninja \
-      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_BUILD_TYPE=Release \
       ${KICAD_CMAKE_OPTIONS} \
       ../..
 EOF

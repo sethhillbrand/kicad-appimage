@@ -104,7 +104,10 @@ AppDir:
   files:
     exclude:
       - usr/share/man
-      - usr/share/doc
+      - usr/share/doc/*/README.*
+      - usr/share/doc/*/changelog.*
+      - usr/share/doc/*/NEWS.*
+      - usr/share/doc/*/TODO.*
       - usr/include
       - usr/share/opencascade/data
       - usr/share/opencascade/samples
