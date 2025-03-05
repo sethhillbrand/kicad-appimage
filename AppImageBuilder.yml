@@ -56,7 +56,6 @@ AppDir:
       - libsm6
       - libtiff6
       - libxtst6
-      # libwxbase3.2-1
       - libexpat1
       - libpcre2-32-0
 
@@ -76,6 +75,8 @@ AppDir:
       - libgit2-1.5
       - libsecret-1-0
       - libprotobuf32
+      - libtbb12
+      - libtbbmalloc2
       - libzstd1
       - libnng1
       - sudo
@@ -111,4 +112,4 @@ AppDir:
 AppImage:
   arch: x86_64
   update-information: guess
-  comp: xz
+  comp: zstd
