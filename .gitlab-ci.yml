@@ -36,12 +36,12 @@ build-docker:
       git clone https://github.com/sethhillbrand/appimage-builder.git && \
       git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse
     - |
-      # --build-context packages3d-src=kicad-packages3D
       docker buildx build \
         --progress=plain \
         --build-context kicad-src=kicad \
         --build-context symbols-src=kicad-symbols \
         --build-context footprints-src=kicad-footprints \
+        --build-context packages3d-src=kicad-packages3D \
         --build-context templates-src=kicad-templates \
         --build-context ngspice-src=ngspice \
         --build-context occt-src=OCCT \
