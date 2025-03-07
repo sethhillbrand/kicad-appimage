@@ -156,11 +156,11 @@ RUN /build-library.sh
 FROM scratch AS templates
 COPY --from=build-templates /usr/installtemp /usr/installtemp
 
-# FROM build-dependencies AS build-packages3d
-# COPY --from=packages3d-src . /src
-# RUN /build-library.sh
-# FROM scratch AS packages3d
-# COPY --from=build-packages3d /usr/installtemp /usr/installtemp
+FROM build-dependencies AS build-packages3d
+COPY --from=packages3d-src . /src
+RUN /build-library.sh
+FROM scratch AS packages3d
+COPY --from=build-packages3d /usr/installtemp /usr/installtemp
 
 FROM build-dependencies AS build-kicad
 COPY --from=wx / /
@@ -189,21 +189,10 @@ RUN ninja
 # install
 RUN cmake --install . --prefix=/usr/installtemp/
 
-# # Now test the build, shipping a broken image doesn't help us
-# # Maybe we should only run the cli tests but all of them is fine for now
-# WORKDIR /src
-# RUN <<-EOF
-#     set -ex
-#     pip3 install -r ./qa/tests/requirements.txt --break-system-packages
-#     cd build/linux
-#     ctest --output-on-failure
-# EOF
-
 FROM scratch AS kicad
 COPY --from=build-kicad /usr/installtemp /usr/installtemp
 COPY --from=build-kicad /usr/share/kicad /usr/share/kicad
 
-# Everything except 3D models
 FROM scratch AS install
 COPY --from=wx / /
 COPY --from=wxpython / /
@@ -212,6 +201,7 @@ COPY --from=occt /usr /usr
 COPY --from=symbols /usr/installtemp/share /usr/share
 COPY --from=footprints /usr/installtemp/share /usr/share
 COPY --from=templates /usr/installtemp/share /usr/share
+COPY --from=packages3d /usr/installtemp/share /usr/share
 COPY --from=kicad /usr/installtemp/bin /usr/bin
 COPY --from=kicad /usr/installtemp/share /usr/share
 COPY --from=kicad /usr/installtemp/lib /usr/lib
@@ -261,20 +251,6 @@ RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_
 FROM scratch AS appdir
 COPY --from=build-appdir /tmp/AppDir /AppDir
 
-# FROM appimage-builder AS build-appdir-full
-# COPY --from=install / /tmp/AppDir/
-# COPY --from=packages3d /usr/installtemp/share /tmp/AppDir/usr/share
-# COPY ./kicad.sh /tmp/AppDir/usr/bin/
-# WORKDIR /tmp
-# COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
-# ARG KICAD_BUILD_DEBUG
-# ARG KICAD_BUILD_MAJVERSION
-# ARG KICAD_BUILD_RELEASE
-# RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder --skip-appimage
-
-# FROM scratch AS appdir-full
-# COPY --from=build-appdir-full /tmp/AppDir /AppDir
-
 FROM appimage-builder AS build-appimage
 COPY --from=appdir /AppDir /tmp/AppDir
 RUN /tmp/appimagetool-x86_64.AppImage --appimage-extract-and-run -l -g -v --comp zstd /tmp/AppDir /tmp/KiCad-x86_64.AppImage
@@ -282,15 +258,3 @@ RUN /tmp/appimagetool-x86_64.AppImage --appimage-extract-and-run -l -g -v --comp
 FROM scratch AS appimage
 ARG KICAD_BUILD_RELEASE
 COPY --from=build-appimage /tmp/KiCad-x86_64.AppImage /KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage
-
-# FROM appimage-builder AS build-appimage-full
-# COPY --from=appdir-full /AppDir /tmp/AppDir
-# RUN /tmp/appimagetool-x86_64.AppImage --appimage-extract-and-run -l -g -v --comp zstd /tmp/AppDir /tmp/KiCad-x86_64.AppImage
-
-# FROM scratch AS appimage-full
-# ARG KICAD_BUILD_RELEASE
-# COPY --from=build-appimage-full /tmp/KiCad-x86_64.AppImage /KiCad-full-${KICAD_BUILD_RELEASE}-x86_64.AppImage
-
-# # Both AppImages for release
-# FROM appimage-full AS appimages
-# COPY --from=appimage / /
