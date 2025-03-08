@@ -24,8 +24,8 @@ AppDir:
     include:
       - bash
       - dash
-      - python3
-      - python-is-python3
+      - git
+      - sudo
       - librsvg2-common # gdk-pixbuf
 
       # HACK: this breaks Wayland support, but GTK needs it with Wayland < 1.20, as it always links against it
@@ -35,51 +35,62 @@ AppDir:
       - libwayland-cursor0
 
       # Dependencies of wxGTK and wxPython we provide in the AppDir
-      # python3-wxgtk4.0
-      - python3-pil
-      - python3-six
-      - python3-numpy
-      - libgcc-s1
-      # libwxgtk-gl3.2-1
-      - libglib2.0-0
-      - libgtk-3-0
-      # libwxgtk3.2-1
+      - libbz2-1.0
       - libcairo2
+      - libexpat1
       - libfontconfig1
       - libgdk-pixbuf-2.0-0
+      - libgcc-s1
+      - libglib2.0-0
+      - libgtk-3-0
       - libjpeg62-turbo
       - libnotify4
       - libpango-1.0-0
       - libpangocairo-1.0-0
       - libpangoft2-1.0-0
+      - libpcre2-32-0
       - libpng16-16
       - libsm6
       - libtiff6
       - libxtst6
-      - libexpat1
-      - libpcre2-32-0
 
-      - libbz2-1.0
-      - libcairo2
-      - libglu1-mesa
-      - libglew2.2
       - libpython3.11
       - python3
+      - python-is-python3
       - python3-yaml
       - python3-typing-extensions
+      - python3-numpy
+      - python3-pil
+      - python3-six
+
+      # Dependencies of OCCT
+      - libtbb12
+      - libtbbbind-2-5
+      - libtbbmalloc2
+      - libfreeimage3
+      - libfreetype6
+      - libhwloc15
+      - libjxr0
+      - libraw20
+      - libopenexr-3-1-30
+
+      # Dependencies of ngspice
+      - libgomp1
+      - libreadline8
+      - libtinfo6
+
+      # Dependencies of KiCad
       - libcurl4-gnutls-dev
+      - libglu1-mesa
+      - libglew2.2
       - unixodbc
       - zlib1g
       - shared-mime-info
-      - git
       - libgit2-1.5
       - libsecret-1-0
       - libprotobuf32
-      - libtbb12
-      - libtbbmalloc2
       - libzstd1
       - libnng1
-      - sudo
 
     exclude:
       - adwaita-icon-theme
@@ -91,7 +102,7 @@ AppDir:
     debug: ${KICAD_BUILD_DEBUG}
 
     env:
-      APPDIR_LIBRARY_PATH: '${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib/X86_64:${APPDIR}/lib/x86_64:${APPDIR}/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders'
+      APPDIR_LIBRARY_PATH: '${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib/X86_64:${APPDIR}/lib/x86_64:${APPDIR}/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders:${APPDIR}/opt/glibc/lib/x86_64-linux-gnu/'
       PYTHONPATH: '${APPDIR}/usr/lib/python3.11/site-packages'
       XDG_DATA_DIRS: '${APPDIR}/usr/share:$XDG_DATA_DIRS'
       KICAD_STOCK_DATA_HOME: '${APPDIR}/usr/share/kicad'
@@ -112,7 +123,24 @@ AppDir:
       - usr/share/opencascade/data
       - usr/share/opencascade/samples
 
+  # test:
+  #   debian:
+  #     image: appimagecrafters/tests-env:debian-stable
+  #     command: "./AppRun"
+  #     use_host_x: True
+  #   centos:
+  #     image: appimagecrafters/tests-env:centos-7
+  #     command: "./AppRun"
+  #     use_host_x: True
+  #   fedora:
+  #     image: appimagecrafters/tests-env:fedora-33
+  #     command: "./AppRun"
+  #     use_host_x: True
+  #   ubuntu:
+  #     image: appimagecrafters/tests-env:ubuntu-focal
+  #     command: "./AppRun"
+  #     use_host_x: True
+
 AppImage:
   arch: x86_64
   update-information: guess
-  comp: zstd
