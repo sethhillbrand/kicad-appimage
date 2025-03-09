@@ -205,8 +205,6 @@ FROM scratch AS kicad
 COPY --from=build-kicad /usr/installtemp /usr/installtemp
 COPY --from=build-kicad /usr/share/kicad /usr/share/kicad
 
-ARG KICAD_APPIMAGE_LIGHT=false
-
 FROM scratch AS light_false
 COPY --from=packages3d /usr/installtemp/share /usr/share
 
@@ -276,7 +274,6 @@ RUN /tmp/appimagetool-x86_64.AppImage --appimage-extract-and-run -l -g -v --comp
 
 FROM scratch AS appimage
 ARG KICAD_BUILD_RELEASE
-ARG KICAD_APPIMAGE_LIGHT=false
 # Add suffix to filename if it's a light build
 ARG KICAD_APPIMAGE_FILENAME=KiCad-${KICAD_BUILD_RELEASE}$([ "$KICAD_APPIMAGE_LIGHT" = "true" ] && echo "-light" || echo "")-x86_64.AppImage
 COPY --from=build-appimage /tmp/KiCad-x86_64.AppImage /${KICAD_APPIMAGE_FILENAME}
