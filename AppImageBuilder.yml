@@ -67,12 +67,7 @@ AppDir:
       - libtbb12
       - libtbbbind-2-5
       - libtbbmalloc2
-      - libfreeimage3
-      - libfreetype6
       - libhwloc15
-      - libjxr0
-      - libraw20
-      - libopenexr-3-1-30
 
       # Dependencies of ngspice
       - libgomp1
