@@ -28,7 +28,7 @@ build-docker:
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git
     - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=ngspice-44.2
-    - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=V7_8_0
+    - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=V7_8_1
     - patch -d OCCT -p1 < ./patch/0001-occt-tbb-1.diff
 
     # Use Dmitrii's fork of appimage-builder until the fix is merged
