@@ -61,6 +61,7 @@ COPY --chmod=755 <<-'EOF' /build-library.sh
       -DCMAKE_RULE_MESSAGES=OFF \
       -DCMAKE_VERBOSE_MAKEFILE=OFF \
       -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCMAKE_INSTALL_MESSAGE=NEVER \
       /src
     ninja
     cmake --install . --prefix=/usr/installtemp/
@@ -109,7 +110,7 @@ RUN <<-EOF
     -DCMAKE_BUILD_TYPE=Release \
     .. \
 EOF
-RUN ninja -C build
+RUN ninja -C build --quiet
 RUN DESTDIR=/tmp/rootfs cmake --install build
 FROM scratch AS occt
 COPY --from=build-occt /tmp/rootfs /
@@ -140,8 +141,11 @@ RUN <<-EOF
     tar xzf wxPython.tar.gz -C wxPython --strip-components=1
 EOF
 WORKDIR /tmp/wxPython
-RUN python build.py build --use_syswx --prefix=/usr
-RUN python build.py install --destdir=/tmp/rootfs
+RUN <<-EOF
+    export PYTHONWARNINGS="ignore::SetuptoolsDeprecationWarning"
+    python build.py build --use_syswx --prefix=/usr
+    python build.py install --destdir=/tmp/rootfs
+EOF
 FROM scratch AS wxpython
 COPY --from=build-wxpython /tmp/rootfs/usr/local /usr
 
