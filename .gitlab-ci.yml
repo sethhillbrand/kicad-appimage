@@ -24,17 +24,19 @@ build-docker:
     - export KICAD_APPIMAGE_LIGHT=${KICAD_APPIMAGE_LIGHT:-false}
 
   script:
-    - git clone --depth=1 https://gitlab.com/kicad/code/kicad.git
-    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git
-    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git
-    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git
+    # Get the KiCad source code, including up to 60 days of history in order to be able
+    # to build the AppImage with the correct version information but not too much history
+    - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master}
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git --branch=${KICAD_LIB_BRANCH:-master}
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git --branch=${KICAD_LIB_BRANCH:-master}
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git --branch=${KICAD_LIB_BRANCH:-master}
     # Only clone 3D packages if not building light version
     - |
       if [ "$KICAD_APPIMAGE_LIGHT" != "true" ]; then
-        git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git
+        git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git --branch=${KICAD_LIB_BRANCH:-master}
       fi
-    - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=ngspice-44.2
-    - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=V7_8_1
+    - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=${NGSPICE_BRANCH:-ngspice-44.2}
+    - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=${OCCT_BRANCH:-V7_8_1}
     - patch -d OCCT -p1 < ./patch/0001-occt-tbb-1.diff
 
     # Use Dmitrii's fork of appimage-builder until the fix is merged
@@ -57,7 +59,6 @@ build-docker:
         --build-context occt-src=OCCT \
         --build-context appimage-builder-src=appimage-builder \
         --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
-        --build-arg KICAD_BUILD_MAJVERSION=9 \
         --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
         --build-arg KICAD_APPIMAGE_LIGHT=$KICAD_APPIMAGE_LIGHT \
         --platform linux/amd64 \

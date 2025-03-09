@@ -1,7 +1,7 @@
 ARG KICAD_BUILD_DEBUG=false
-ARG KICAD_BUILD_MAJVERSION=9
 ARG KICAD_BUILD_RELEASE=nightly
 ARG KICAD_APPIMAGE_LIGHT
+ARG KICAD_BUILD_TYPE="RelWithDebInfo"
 ARG KICAD_CMAKE_OPTIONS="-DKICAD_SCRIPTING_WXPYTHON=ON \
                          -DKICAD_BUILD_I18N=ON \
                          -DCMAKE_INSTALL_PREFIX=/usr \
@@ -181,6 +181,8 @@ COPY --from=ngspice / /
 COPY --from=occt / /
 COPY --from=kicad-src . /src
 ARG KICAD_CMAKE_OPTIONS
+ARG KICAD_BUILD_TYPE
+
 # We want the built install prefix in /usr to match normal system installed software
 # However to aid in docker copying only our files, we redirect the prefix in the cmake install
 # config
@@ -190,7 +192,8 @@ RUN <<-EOF
     cd /src/build/linux
     cmake \
       -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
+      -DKICAD_VERSION_EXTRA="AppImage" \
+      -DCMAKE_BUILD_TYPE=${KICAD_BUILD_TYPE} \
       ${KICAD_CMAKE_OPTIONS} \
       ../..
 EOF
@@ -256,12 +259,14 @@ EOF
 ADD --chmod=755 https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage /tmp/appimagetool-x86_64.AppImage
 
 FROM appimage-builder AS build-appdir
+ARG KICAD_BUILD_MAJVERSION
+COPY --from=build-kicad /src/build/linux/kicad_build_version.txt /tmp/kicad_build_version.txt
+RUN KICAD_BUILD_MAJVERSION=$(cat /tmp/kicad_build_version.txt|sed 's/\([0-9]\+\)\..*/\1/')
 COPY --from=install / /tmp/AppDir/
 COPY ./kicad.sh /tmp/AppDir/usr/bin/
 WORKDIR /tmp
 COPY ./AppImageBuilder.yml /tmp/AppImageBuilder.yml
 ARG KICAD_BUILD_DEBUG
-ARG KICAD_BUILD_MAJVERSION
 ARG KICAD_BUILD_RELEASE
 RUN KICAD_BUILD_DEBUG=${KICAD_BUILD_DEBUG} KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION} KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE} appimage-builder --skip-appimage
 
@@ -273,4 +278,5 @@ COPY --from=appdir /AppDir /tmp/AppDir
 RUN /tmp/appimagetool-x86_64.AppImage --appimage-extract-and-run -l -g -v --comp zstd /tmp/AppDir /tmp/KiCad-x86_64.AppImage
 
 FROM scratch AS appimage
-COPY --from=build-appimage /tmp/KiCad-x86_64.AppImage "/${KICAD_BUILD_RELEASE}${KICAD_APPIMAGE_LIGHT:+"-light"}-x86_64.AppImage"
+ARG KICAD_BUILD_RELEASE
+COPY --from=build-appimage /tmp/KiCad-x86_64.AppImage "/KiCad-${KICAD_BUILD_RELEASE}${KICAD_APPIMAGE_LIGHT:+"-light"}-x86_64.AppImage"
