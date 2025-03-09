@@ -1,6 +1,7 @@
 ARG KICAD_BUILD_DEBUG=false
 ARG KICAD_BUILD_MAJVERSION=9
 ARG KICAD_BUILD_RELEASE=nightly
+ARG KICAD_APPIMAGE_LIGHT=false
 ARG KICAD_CMAKE_OPTIONS="-DKICAD_SCRIPTING_WXPYTHON=ON \
                          -DKICAD_BUILD_I18N=ON \
                          -DCMAKE_INSTALL_PREFIX=/usr \
@@ -204,7 +205,15 @@ FROM scratch AS kicad
 COPY --from=build-kicad /usr/installtemp /usr/installtemp
 COPY --from=build-kicad /usr/share/kicad /usr/share/kicad
 
-FROM scratch AS install
+ARG KICAD_APPIMAGE_LIGHT=false
+
+FROM scratch AS light_false
+COPY --from=packages3d /usr/installtemp/share /usr/share
+
+FROM scratch AS light_true
+# nothing
+
+FROM light_${KICAD_APPIMAGE_LIGHT} as install
 COPY --from=wx / /
 COPY --from=wxpython / /
 COPY --from=ngspice /usr /usr
@@ -212,7 +221,6 @@ COPY --from=occt /usr /usr
 COPY --from=symbols /usr/installtemp/share /usr/share
 COPY --from=footprints /usr/installtemp/share /usr/share
 COPY --from=templates /usr/installtemp/share /usr/share
-COPY --from=packages3d /usr/installtemp/share /usr/share
 COPY --from=kicad /usr/installtemp/bin /usr/bin
 COPY --from=kicad /usr/installtemp/share /usr/share
 COPY --from=kicad /usr/installtemp/lib /usr/lib
@@ -268,4 +276,7 @@ RUN /tmp/appimagetool-x86_64.AppImage --appimage-extract-and-run -l -g -v --comp
 
 FROM scratch AS appimage
 ARG KICAD_BUILD_RELEASE
-COPY --from=build-appimage /tmp/KiCad-x86_64.AppImage /KiCad-${KICAD_BUILD_RELEASE}-x86_64.AppImage
+ARG KICAD_APPIMAGE_LIGHT=false
+# Add suffix to filename if it's a light build
+ARG KICAD_APPIMAGE_FILENAME=KiCad-${KICAD_BUILD_RELEASE}$([ "$KICAD_APPIMAGE_LIGHT" = "true" ] && echo "-light" || echo "")-x86_64.AppImage
+COPY --from=build-appimage /tmp/KiCad-x86_64.AppImage /${KICAD_APPIMAGE_FILENAME}

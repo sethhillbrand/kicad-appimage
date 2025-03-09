@@ -20,13 +20,19 @@ build-docker:
     - export AWS_ACCESS_KEY_ID=$KICAD_CI_R2_KEY_ID
     - export AWS_SECRET_ACCESS_KEY=$KICAD_CI_R2_ACCESS_KEY
     - export S3_ENDPOINT_URL=$KICAD_CI_R2_ENDPOINT
+    # Default to full build if variable not set
+    - export KICAD_APPIMAGE_LIGHT=${KICAD_APPIMAGE_LIGHT:-false}
 
   script:
     - git clone --depth=1 https://gitlab.com/kicad/code/kicad.git
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git
-    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git
+    # Only clone 3D packages if not building light version
+    - |
+      if [ "$KICAD_APPIMAGE_LIGHT" != "true" ]; then
+        git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git
+      fi
     - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=ngspice-44.2
     - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=V7_8_1
     - patch -d OCCT -p1 < ./patch/0001-occt-tbb-1.diff
@@ -36,19 +42,24 @@ build-docker:
       git clone https://github.com/sethhillbrand/appimage-builder.git && \
       git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse
     - |
+      PACKAGES3D_CONTEXT=""
+      if [ "$KICAD_APPIMAGE_LIGHT" != "true" ]; then
+        PACKAGES3D_CONTEXT="--build-context packages3d-src=kicad-packages3D"
+      fi
       docker buildx build \
         --progress=plain \
         --build-context kicad-src=kicad \
         --build-context symbols-src=kicad-symbols \
         --build-context footprints-src=kicad-footprints \
-        --build-context packages3d-src=kicad-packages3D \
         --build-context templates-src=kicad-templates \
+        $PACKAGES3D_CONTEXT \
         --build-context ngspice-src=ngspice \
         --build-context occt-src=OCCT \
         --build-context appimage-builder-src=appimage-builder \
         --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
         --build-arg KICAD_BUILD_MAJVERSION=9 \
         --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
+        --build-arg KICAD_APPIMAGE_LIGHT=$KICAD_APPIMAGE_LIGHT \
         --platform linux/amd64 \
         --target appimage -o type=local,dest=. \
         -f Dockerfile .
