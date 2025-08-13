@@ -31,6 +31,8 @@ RUN <<-EOF
         libsecret-1-dev \
         libnng-dev \
         libprotobuf-dev \
+        libspnav-dev \
+        libzint-dev \
         protobuf-compiler \
         swig4.0 \
         python3-pip \
