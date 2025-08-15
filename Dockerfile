@@ -151,7 +151,7 @@ EOF
 WORKDIR /tmp/wxPython
 RUN <<-EOF
     export PYTHONWARNINGS="ignore::SetuptoolsDeprecationWarning"
-    python build.py build --use_syswx --prefix=/usr
+    python build.py build --prefix=/usr
     python build.py install --destdir=/tmp/rootfs
 EOF
 FROM scratch AS wxpython
