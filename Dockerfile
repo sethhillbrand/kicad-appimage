@@ -36,6 +36,7 @@ RUN <<-EOF
         protobuf-compiler \
         swig4.0 \
         python3-pip \
+        python3-requests \
         python3-venv \
         protobuf-compiler \
         libzstd-dev \
@@ -149,7 +150,6 @@ RUN <<-EOF
 EOF
 WORKDIR /tmp/wxPython
 RUN <<-EOF
-    pip install requests
     export PYTHONWARNINGS="ignore::SetuptoolsDeprecationWarning"
     python build.py build --use_syswx --prefix=/usr
     python build.py install --destdir=/tmp/rootfs
