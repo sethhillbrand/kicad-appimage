@@ -95,6 +95,7 @@ RUN <<-EOF
     -DINSTALL_DIR_CMAKE:PATH=lib/x86_64/cmake/opencascade \
     -DUSE_RAPIDJSON:BOOL=ON \
     -DUSE_TBB:BOOL=ON \
+    -DCHOSEN_IMPORT_CONF=NONE \
     -D3RDPARTY_TBB_LIBRARY_DIR:PATH=/usr/lib/x86_64-linux-gnu \
     -D3RDPARTY_TBBMALLOC_LIBRARY_DIR:PATH=/usr/lib/x86_64-linux-gnu \
     -DUSE_DRACO:BOOL=OFF \
@@ -148,6 +149,7 @@ RUN <<-EOF
 EOF
 WORKDIR /tmp/wxPython
 RUN <<-EOF
+    pip install requests
     export PYTHONWARNINGS="ignore::SetuptoolsDeprecationWarning"
     python build.py build --use_syswx --prefix=/usr
     python build.py install --destdir=/tmp/rootfs
