@@ -119,15 +119,18 @@ FROM scratch AS occt
 COPY --from=build-occt /tmp/rootfs /
 
 FROM build-dependencies AS build-wx
-ADD https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.tar.bz2 /tmp/wxWidgets.tar.bz2
+ADD https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.8.1/wxWidgets-3.2.8.1.tar.bz2 /tmp/wxWidgets.tar.bz2
 WORKDIR /tmp
 RUN <<-EOF
     mkdir wxWidgets
     tar xjf wxWidgets.tar.bz2 -C wxWidgets --strip-components=1
     cd wxWidgets
     cmake -G Ninja -B builddir -DCMAKE_INSTALL_PREFIX=/usr \
-          -DwxBUILD_TOOLKIT=gtk3 -DwxUSE_OPENGL=ON \
-          -DwxUSE_GLCANVAS_EGL=OFF
+        -DwxBUILD_SHARED=ON \
+        -DwxBUILD_TOOLKIT=gtk3 \
+        -DwxUSE_OPENGL=ON \
+        -DwxUSE_GLCANVAS_EGL=OFF \
+        -DwxBUILD_COMPONENTS="std;core;adv;aui;stc;gl;html;xml;propgrid;richtext;webview;xrc" \
 EOF
 WORKDIR /tmp/wxWidgets
 RUN ninja -C builddir
@@ -137,7 +140,7 @@ COPY --from=build-wx /tmp/rootfs /
 
 FROM build-dependencies AS build-wxpython
 COPY --from=wx / /
-ADD https://github.com/wxWidgets/Phoenix/releases/download/wxPython-4.2.2/wxPython-4.2.2.tar.gz /tmp/wxPython.tar.gz
+ADD https://github.com/wxWidgets/Phoenix/releases/download/wxPython-4.2.3/wxPython-4.2.3.tar.gz /tmp/wxPython.tar.gz
 WORKDIR /tmp
 RUN <<-EOF
     mkdir wxPython
