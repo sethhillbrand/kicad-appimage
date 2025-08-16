@@ -53,6 +53,8 @@ RUN <<-EOF
     apt-get clean autoclean
     apt-get autoremove -y
     rm -rf /var/lib/apt/lists/*
+    # Upgrade pip and install required Python packages for wxPython build
+    python3 -m pip install --break-system-packages --upgrade pip setuptools wheel build packaging
 EOF
 
 COPY --chmod=755 <<-'EOF' /build-library.sh
@@ -151,6 +153,12 @@ EOF
 WORKDIR /tmp/wxPython
 RUN <<-EOF
     export PYTHONWARNINGS="ignore::SetuptoolsDeprecationWarning"
+    # Ensure we have the latest setuptools and wheel
+    python -m pip install --break-system-packages --upgrade setuptools wheel
+    # Show Python and setuptools version for debugging
+    python -c "import sys; print('Python version:', sys.version)"
+    python -c "import setuptools; print('setuptools version:', setuptools.__version__)"
+    python -c "from setuptools.command import bdist_wheel; print('bdist_wheel available')"
     python build.py build --prefix=/usr
     python build.py install --destdir=/tmp/rootfs
 EOF
@@ -221,7 +229,7 @@ COPY --from=packages3d /usr/installtemp/share /usr/share
 FROM scratch AS light_true
 # nothing
 
-FROM light_${KICAD_APPIMAGE_LIGHT:-false} as install
+FROM light_${KICAD_APPIMAGE_LIGHT:-false} AS install
 COPY --from=wx / /
 COPY --from=wxpython / /
 COPY --from=ngspice /usr /usr
