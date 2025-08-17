@@ -1,10 +1,11 @@
 # Build wxPython bindings
 ARG BASE_IMAGE
 ARG WX_IMAGE
-ARG WXPYTHON_VERSION=4.2.3
 
-FROM ${WX_IMAGE} as wx
-FROM ${BASE_IMAGE} as build
+FROM ${WX_IMAGE} AS wx
+FROM ${BASE_IMAGE} AS build
+
+ARG WXPYTHON_VERSION
 
 # Add metadata
 LABEL description="wxPython build for KiCad AppImage"

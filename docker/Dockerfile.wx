@@ -1,9 +1,8 @@
 # Build wxWidgets
 ARG BASE_IMAGE
-ARG WX_VERSION
-
 FROM ${BASE_IMAGE} AS build
 
+ARG WX_VERSION
 RUN test -n ${WX_VERSION} || (echo "WX_VERSION is not set" && exit 1)
 
 # Add metadata
