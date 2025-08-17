@@ -60,9 +60,8 @@ build-wx:
     # Check if this version already exists
     - |
       if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
-        echo "wxWidgets $WX_VERSION already built, skipping"
-        docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/wx:latest
-        docker push $CI_REGISTRY_IMAGE/wx:latest
+        echo "wxWidgets $WX_VERSION already built, syncing latest tag (remote)"
+        docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/wx:latest" "$IMAGE_NAME"
         exit 0
       fi
     - docker build --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest --build-arg WX_VERSION=$WX_VERSION -t $IMAGE_NAME -f docker/Dockerfile.wx .
@@ -81,9 +80,8 @@ build-wxpython:
     # Check if this version already exists
     - |
       if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
-        echo "wxPython $WXPYTHON_VERSION already built, skipping"
-        docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/wxpython:latest
-        docker push $CI_REGISTRY_IMAGE/wxpython:latest
+        echo "wxPython $WXPYTHON_VERSION already built, syncing latest tag (remote)"
+        docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/wxpython:latest" "$IMAGE_NAME"
         exit 0
       fi
     - docker build --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest --build-arg WX_IMAGE=$CI_REGISTRY_IMAGE/wx:latest --build-arg WXPYTHON_VERSION=$WXPYTHON_VERSION -t $IMAGE_NAME -f docker/Dockerfile.wxpython .
@@ -102,9 +100,8 @@ build-occt:
     # Check if this version already exists
     - |
       if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
-        echo "OCCT $OCCT_VERSION already built, skipping"
-        docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/occt:latest
-        docker push $CI_REGISTRY_IMAGE/occt:latest
+        echo "OCCT $OCCT_VERSION already built, syncing latest tag (remote)"
+        docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/occt:latest" "$IMAGE_NAME"
         exit 0
       fi
     - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=${OCCT_BRANCH:-$OCCT_VERSION} occt || exit 1
@@ -125,9 +122,8 @@ build-ngspice:
     # Check if this commit already exists
     - |
       if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
-        echo "ngspice commit $NGSPICE_COMMIT already built, skipping"
-        docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/ngspice:latest
-        docker push $CI_REGISTRY_IMAGE/ngspice:latest
+        echo "ngspice commit $NGSPICE_COMMIT already built, syncing latest tag (remote)"
+        docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/ngspice:latest" "$IMAGE_NAME"
         exit 0
       fi
     - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=${NGSPICE_TAG:-$NGSPICE_COMMIT} ngspice || exit 1
