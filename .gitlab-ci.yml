@@ -208,6 +208,8 @@ build-kicad:
     - docker pull $CI_REGISTRY_IMAGE/libs:latest || echo "Libs image not found, will build"
     - docker pull $CI_REGISTRY_IMAGE/packages3d:latest || echo "3D packages image not found, will build"
   script:
+    - echo "CI_REGISTRY_IMAGE is '$CI_REGISTRY_IMAGE'"
+    - echo "Registry arg will be '$CI_REGISTRY_IMAGE'"
     - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master} || exit 1
     - git clone https://github.com/sethhillbrand/appimage-builder.git && git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse || exit 1
     - docker buildx build

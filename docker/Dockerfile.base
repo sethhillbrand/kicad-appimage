@@ -25,6 +25,8 @@ RUN <<-EOPKG
         libgit2-dev \
         libsecret-1-dev \
         libnng-dev \
+        libpoppler-dev \
+        libpoppler-glib-dev \
         libprotobuf-dev \
         libspnav-dev \
         libtool \
