@@ -217,7 +217,3 @@ build-kicad:
       --build-arg KICAD_APPIMAGE_LIGHT=$KICAD_APPIMAGE_LIGHT
       --platform linux/amd64 --target appimage -o type=local,dest=. -f Dockerfile .
     - rclone copy ./*.AppImage r2:$KICAD_CI_R2_BUCKET/appimage/
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: always
-    - when: manual
