@@ -31,7 +31,6 @@ WORKDIR /tmp/kicad
 
 # Build KiCad
 RUN <<'EOS'
-    set -euo pipefail
     mkdir build
     cd build
     cmake -G Ninja \
@@ -72,7 +71,6 @@ ENV KICAD_APPIMAGE_LIGHT=${KICAD_APPIMAGE_LIGHT}
 
 # Build AppImage
 RUN <<'EOS'
-    set -euo pipefail
     # Create launcher script
     mkdir -p AppDir/usr/bin
     cat > AppDir/usr/bin/kicad.sh << 'EOF'

@@ -11,7 +11,6 @@ COPY --from=occt-src . /tmp/occt
 
 WORKDIR /tmp/occt
 RUN <<'EOS'
-    set -euo pipefail
     mkdir build
     cd build
     cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release \

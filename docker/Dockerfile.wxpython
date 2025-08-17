@@ -19,14 +19,12 @@ ADD https://github.com/wxWidgets/Phoenix/releases/download/wxPython-${WXPYTHON_V
 
 WORKDIR /tmp
 RUN <<'EOS'
-    set -euo pipefail
     mkdir wxPython
     tar xzf wxPython.tar.gz -C wxPython --strip-components=1
 EOS
 
 WORKDIR /tmp/wxPython
 RUN <<'EOS2'
-    set -euo pipefail
     export PYTHONWARNINGS="ignore::SetuptoolsDeprecationWarning"
     # Verify Python environment
     python3 -m pip install --break-system-packages --upgrade setuptools wheel

@@ -14,7 +14,6 @@ ADD https://github.com/wxWidgets/wxWidgets/releases/download/v${WX_VERSION}/wxWi
 
 WORKDIR /tmp
 RUN <<'EOS'
-    set -euo pipefail
     mkdir wxWidgets
     tar xjf wxWidgets.tar.bz2 -C wxWidgets --strip-components=1
     cd wxWidgets
