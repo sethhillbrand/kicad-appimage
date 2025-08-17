@@ -1,19 +1,19 @@
 # Build KiCad library data (symbols, footprints, templates)
 ARG BASE_IMAGE
 
-FROM ${BASE_IMAGE} as build-symbols
+FROM ${BASE_IMAGE} AS build-symbols
 # Add metadata
 LABEL description="KiCad symbols library"
 COPY --from=symbols-src . /src
 RUN /build-library.sh
 
-FROM ${BASE_IMAGE} as build-footprints
+FROM ${BASE_IMAGE} AS build-footprints
 # Add metadata
 LABEL description="KiCad footprints library"
 COPY --from=footprints-src . /src
 RUN /build-library.sh
 
-FROM ${BASE_IMAGE} as build-templates
+FROM ${BASE_IMAGE} AS build-templates
 # Add metadata
 LABEL description="KiCad templates library"
 COPY --from=templates-src . /src
