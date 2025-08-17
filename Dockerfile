@@ -1,19 +1,20 @@
 # Main Dockerfile for building KiCad AppImage
 ARG REGISTRY
-ARG KICAD_BUILD_RELEASE=nightly
-ARG KICAD_APPIMAGE_LIGHT=false
 
 # Import all dependency images
-FROM ${REGISTRY}/base:latest as base
-FROM ${REGISTRY}/wx:latest as wx
-FROM ${REGISTRY}/wxpython:latest as wxpython
-FROM ${REGISTRY}/ngspice:latest as ngspice
-FROM ${REGISTRY}/occt:latest as occt
-FROM ${REGISTRY}/libs:latest as libs
-FROM ${REGISTRY}/packages3d:latest as packages3d
+FROM ${REGISTRY}/base:latest AS base
+FROM ${REGISTRY}/wx:latest AS wx
+FROM ${REGISTRY}/wxpython:latest AS wxpython
+FROM ${REGISTRY}/ngspice:latest AS ngspice
+FROM ${REGISTRY}/occt:latest AS occt
+FROM ${REGISTRY}/libs:latest AS libs
+FROM ${REGISTRY}/packages3d:latest AS packages3d
 
 # Main build stage
-FROM base as kicad-build
+FROM base AS kicad-build
+
+ARG KICAD_BUILD_RELEASE=nightly
+ARG KICAD_APPIMAGE_LIGHT=false
 
 # Copy all dependencies
 COPY --from=wx / /
@@ -46,7 +47,7 @@ RUN <<'EOS'
 EOS
 
 # AppImage build stage
-FROM base as appimage
+FROM base AS appimage
 ARG KICAD_BUILD_RELEASE
 ARG KICAD_APPIMAGE_LIGHT
 
@@ -92,5 +93,5 @@ EOF
 EOS
 
 # Final stage - extract AppImage
-FROM scratch as appimage
+FROM scratch
 COPY --from=appimage /tmp/*.AppImage /

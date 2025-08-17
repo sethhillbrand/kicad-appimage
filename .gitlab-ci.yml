@@ -25,11 +25,7 @@ default:
 # Shared rules for dependency builds
 .dependency_rules: &dependency_rules
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: always
-    - when: manual
-    - if: '$FORCE_REBUILD == "true"'
-      when: always
+    - when: on_success
 
 # Base image - foundational dependencies
 build-base:
@@ -48,6 +44,10 @@ build-base:
     - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/base:latest
     - docker push $IMAGE_NAME
     - docker push $CI_REGISTRY_IMAGE/base:latest
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: manual
 
 # wxWidgets - version-pinned rebuild
 build-wx:
