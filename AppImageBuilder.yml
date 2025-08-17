@@ -88,6 +88,7 @@ AppDir:
       - libprotobuf32
       - libzstd1
       - libnng1
+      - libspnav0
 
     exclude:
       - adwaita-icon-theme

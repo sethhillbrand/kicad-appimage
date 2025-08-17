@@ -27,6 +27,7 @@ RUN <<-EOPKG
         libnng-dev \
         libprotobuf-dev \
         libspnav-dev \
+        libtool \
         libzint-dev \
         protobuf-compiler \
         swig4.0 \

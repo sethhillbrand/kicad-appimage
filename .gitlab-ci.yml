@@ -148,13 +148,7 @@ build-libs:
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git symbols || exit 1
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git footprints || exit 1
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git templates || exit 1
-    - docker build \
-        --build-context symbols-src=symbols \
-        --build-context footprints-src=footprints \
-        --build-context templates-src=templates \
-        --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest \
-        -t $IMAGE_NAME \
-        -f docker/Dockerfile.libs .
+    - docker build --build-context symbols-src=symbols --build-context footprints-src=footprints --build-context templates-src=templates --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest -t $IMAGE_NAME -f docker/Dockerfile.libs .
     - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/libs:latest
     - docker push $IMAGE_NAME
     - docker push $CI_REGISTRY_IMAGE/libs:latest
