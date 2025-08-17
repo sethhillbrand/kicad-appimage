@@ -1,0 +1,26 @@
+# Build KiCad library data (symbols, footprints, templates)
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE} as build-symbols
+# Add metadata
+LABEL description="KiCad symbols library"
+COPY --from=symbols-src . /src
+RUN /build-library.sh
+
+FROM ${BASE_IMAGE} as build-footprints
+# Add metadata
+LABEL description="KiCad footprints library"
+COPY --from=footprints-src . /src
+RUN /build-library.sh
+
+FROM ${BASE_IMAGE} as build-templates
+# Add metadata
+LABEL description="KiCad templates library"
+COPY --from=templates-src . /src
+RUN /build-library.sh
+
+FROM scratch
+# Combine all libraries into single image
+COPY --from=build-symbols /usr/installtemp /usr/installtemp
+COPY --from=build-footprints /usr/installtemp /usr/installtemp
+COPY --from=build-templates /usr/installtemp /usr/installtemp

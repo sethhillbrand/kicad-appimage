@@ -52,6 +52,7 @@ AppDir:
       - libpng16-16
       - libsm6
       - libtiff6
+      - libwebkit2gtk-4.0-37
       - libxtst6
 
       - libpython3.11
@@ -78,6 +79,7 @@ AppDir:
       - libcurl4-gnutls-dev
       - libglu1-mesa
       - libglew2.2
+      - libpoppler-glib8t64
       - unixodbc
       - zlib1g
       - shared-mime-info
@@ -94,7 +96,7 @@ AppDir:
 
   runtime:
     version: v3.0.0-devel-2
-    debug: ${KICAD_BUILD_DEBUG}
+    debug: ${KICAD_BUILD_DEBUG:-false}
 
     env:
       APPDIR_LIBRARY_PATH: '${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/lib/x86_64-linux-gnu:${APPDIR}/lib/X86_64:${APPDIR}/lib/x86_64:${APPDIR}/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders:${APPDIR}/opt/glibc/lib/x86_64-linux-gnu/'
@@ -118,25 +120,26 @@ AppDir:
       - usr/share/opencascade/data
       - usr/share/opencascade/samples
 
-  # test:
-  #   debian:
-  #     image: appimagecrafters/tests-env:debian-stable
-  #     command: "./AppRun"
-  #     use_host_x: True
-  #   centos:
-  #     image: appimagecrafters/tests-env:centos-7
-  #     command: "./AppRun"
-  #     use_host_x: True
-  #   fedora:
-  #     image: appimagecrafters/tests-env:fedora-33
-  #     command: "./AppRun"
-  #     use_host_x: True
-  #   ubuntu:
-  #     image: appimagecrafters/tests-env:ubuntu-focal
-  #     command: "./AppRun"
-  #     use_host_x: True
+  test:
+    # Uncomment to enable testing on different distributions
+    # debian:
+    #   image: appimagecrafters/tests-env:debian-stable
+    #   command: "./AppRun"
+    #   use_host_x: True
+    # centos:
+    #   image: appimagecrafters/tests-env:centos-7
+    #   command: "./AppRun"
+    #   use_host_x: True
+    # fedora:
+    #   image: appimagecrafters/tests-env:fedora-33
+    #   command: "./AppRun"
+    #   use_host_x: True
+    # ubuntu:
+    #   image: appimagecrafters/tests-env:ubuntu-focal
+    #   command: "./AppRun"
+    #   use_host_x: True
 
 AppImage:
   arch: x86_64
   update-information: guess
-  comp: zstd # Overriden by the command line variable in the Dockerfile but needed to build
+  comp: ${COMP_TYPE:-zstd}  # Allow override from environment

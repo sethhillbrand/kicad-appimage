@@ -1,0 +1,76 @@
+# Base image containing common build dependencies for KiCad AppImage builds
+FROM debian:bookworm
+
+LABEL maintainer="KiCad AppImage Team"
+LABEL description="Base build environment for KiCad AppImage"
+
+# Install build dependencies and clean apt cache in a single layer
+RUN <<-EOPKG
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        bison cmake autoconf automake flex \
+        libbz2-dev libcairo2-dev libglu1-mesa-dev \
+        libgl1-mesa-dev libglew-dev libx11-dev \
+        mesa-common-dev pkg-config python3-dev \
+        libboost-all-dev libglm-dev libcurl4-gnutls-dev \
+        libtbb-dev \
+        libgtk-3-dev \
+        unixodbc-dev \
+        zlib1g-dev \
+        shared-mime-info \
+        git \
+        gettext \
+        ninja-build \
+        libgit2-dev \
+        libsecret-1-dev \
+        libnng-dev \
+        libprotobuf-dev \
+        libspnav-dev \
+        libzint-dev \
+        protobuf-compiler \
+        swig4.0 \
+        python3-pip \
+        python3-requests \
+        python3-venv \
+        libzstd-dev \
+        python-is-python3 \
+        libfreeimage-dev \
+        libfreetype-dev \
+        libxext-dev \
+        libxi-dev \
+        libxmu-dev \
+        rapidjson-dev \
+        tcl-dev \
+        tk-dev \
+        ca-certificates \
+        curl \
+        wget
+    # Clean up to reduce image size
+    apt-get clean autoclean
+    apt-get autoremove -y
+    rm -rf /var/lib/apt/lists/*
+    # Upgrade pip and install essential Python packages
+    python3 -m pip install --break-system-packages --upgrade pip setuptools wheel build packaging
+EOPKG
+
+# Helper script to install KiCad library data into a temporary prefix
+COPY --chmod=755 <<'EOS' /build-library.sh
+#!/bin/bash
+set -euo pipefail
+mkdir -p /tmp/build/linux
+cd /tmp/build/linux
+cmake \
+  -G Ninja \
+  -DCMAKE_RULE_MESSAGES=OFF \
+  -DCMAKE_VERBOSE_MAKEFILE=OFF \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DCMAKE_INSTALL_MESSAGE=NEVER \
+  /src
+ninja
+cmake --install . --prefix=/usr/installtemp/
+EOS
+
+# Set up proper environment
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1

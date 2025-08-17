@@ -1,62 +1,232 @@
 workflow:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "schedule"'
+
+variables:
+  # Version pins for reproducible builds
+  WX_VERSION: "3.2.8.1"
+  OCCT_VERSION: "V7_9_1"
+  WXPYTHON_VERSION: "4.2.3"
+  NGSPICE_VERSION: "44.2"
+  S5CMD_VERSION: "2.0.0"
 
 stages:
   - build
 
-build-docker:
-  tags:
-    - kicad-dind
-  stage: build
+default:
   image: docker:28
   services:
     - docker:28-dind
   before_script:
-    - apk update && apk add --no-cache patch curl
-    - curl -LO https://github.com/peak/s5cmd/releases/download/v2.0.0/s5cmd_2.0.0_Linux-64bit.tar.gz
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+
+# Shared rules for dependency builds
+.dependency_rules: &dependency_rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: manual
+    - if: '$FORCE_REBUILD == "true"'
+      when: always
+
+# Base image - foundational dependencies
+build-base:
+  <<: *dependency_rules
+  stage: build
+  script:
+    - BASE_TAG="base-$(date +%Y%m%d)-$CI_COMMIT_SHORT_SHA"
+    - IMAGE_NAME="$CI_REGISTRY_IMAGE/base:$BASE_TAG"
+    # Check if we need to rebuild
+    - |
+      if docker manifest inspect $CI_REGISTRY_IMAGE/base:latest >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
+        echo "Base image exists and no forced rebuild, skipping"
+        exit 0
+      fi
+    - docker build -t $IMAGE_NAME -f docker/Dockerfile.base .
+    - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/base:latest
+    - docker push $IMAGE_NAME
+    - docker push $CI_REGISTRY_IMAGE/base:latest
+
+# wxWidgets - version-pinned rebuild
+build-wx:
+  <<: *dependency_rules
+  stage: build
+  needs: ["build-base"]
+  script:
+    - WX_TAG="wx-$WX_VERSION"
+    - IMAGE_NAME="$CI_REGISTRY_IMAGE/wx:$WX_TAG"
+    # Check if this version already exists
+    - |
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
+        echo "wxWidgets $WX_VERSION already built, skipping"
+        docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/wx:latest
+        docker push $CI_REGISTRY_IMAGE/wx:latest
+        exit 0
+      fi
+    - docker build --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest --build-arg WX_VERSION=$WX_VERSION -t $IMAGE_NAME -f docker/Dockerfile.wx .
+    - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/wx:latest
+    - docker push $IMAGE_NAME
+    - docker push $CI_REGISTRY_IMAGE/wx:latest
+
+# wxPython - depends on wx
+build-wxpython:
+  <<: *dependency_rules
+  stage: build
+  needs: ["build-base", "build-wx"]
+  script:
+    - WXPY_TAG="wxpython-$WXPYTHON_VERSION"
+    - IMAGE_NAME="$CI_REGISTRY_IMAGE/wxpython:$WXPY_TAG"
+    # Check if this version already exists
+    - |
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
+        echo "wxPython $WXPYTHON_VERSION already built, skipping"
+        docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/wxpython:latest
+        docker push $CI_REGISTRY_IMAGE/wxpython:latest
+        exit 0
+      fi
+    - docker build --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest --build-arg WX_IMAGE=$CI_REGISTRY_IMAGE/wx:latest --build-arg WXPYTHON_VERSION=$WXPYTHON_VERSION -t $IMAGE_NAME -f docker/Dockerfile.wxpython .
+    - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/wxpython:latest
+    - docker push $IMAGE_NAME
+    - docker push $CI_REGISTRY_IMAGE/wxpython:latest
+
+# OCCT - version-pinned rebuild
+build-occt:
+  <<: *dependency_rules
+  stage: build
+  needs: ["build-base"]
+  script:
+    - OCCT_TAG="occt-$OCCT_VERSION"
+    - IMAGE_NAME="$CI_REGISTRY_IMAGE/occt:$OCCT_TAG"
+    # Check if this version already exists
+    - |
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
+        echo "OCCT $OCCT_VERSION already built, skipping"
+        docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/occt:latest
+        docker push $CI_REGISTRY_IMAGE/occt:latest
+        exit 0
+      fi
+    - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=${OCCT_BRANCH:-$OCCT_VERSION} occt || exit 1
+    - docker build --build-context occt-src=occt --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest -t $IMAGE_NAME -f docker/Dockerfile.occt .
+    - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/occt:latest
+    - docker push $IMAGE_NAME
+    - docker push $CI_REGISTRY_IMAGE/occt:latest
+
+# ngspice - git hash-based rebuild
+build-ngspice:
+  <<: *dependency_rules
+  stage: build
+  needs: ["build-base"]
+  script:
+    - NGSPICE_COMMIT=$(git ls-remote https://git.code.sf.net/p/ngspice/ngspice.git HEAD | cut -f1 | cut -c1-8)
+    - NGSPICE_TAG="ngspice-$NGSPICE_VERSION"
+    - IMAGE_NAME="$CI_REGISTRY_IMAGE/ngspice:$NGSPICE_TAG"
+    # Check if this commit already exists
+    - |
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
+        echo "ngspice commit $NGSPICE_COMMIT already built, skipping"
+        docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/ngspice:latest
+        docker push $CI_REGISTRY_IMAGE/ngspice:latest
+        exit 0
+      fi
+    - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=${NGSPICE_TAG:-$NGSPICE_COMMIT} ngspice || exit 1
+    - docker build --build-context ngspice-src=ngspice --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest -t $IMAGE_NAME -f docker/Dockerfile.ngspice .
+    - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/ngspice:latest
+    - docker push $IMAGE_NAME
+    - docker push $CI_REGISTRY_IMAGE/ngspice:latest
+
+# KiCad libraries - rebuild on schedule or manual
+build-libs:
+  stage: build
+  needs: ["build-base"]
+  script:
+    - LIBS_DATE=$(date +%Y%m%d)
+    - LIBS_TAG="libs-$LIBS_DATE"
+    - IMAGE_NAME="$CI_REGISTRY_IMAGE/libs:$LIBS_TAG"
+    # Libraries change frequently, rebuild on schedule
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git symbols || exit 1
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git footprints || exit 1
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git templates || exit 1
+    - docker build \
+        --build-context symbols-src=symbols \
+        --build-context footprints-src=footprints \
+        --build-context templates-src=templates \
+        --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest \
+        -t $IMAGE_NAME \
+        -f docker/Dockerfile.libs .
+    - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/libs:latest
+    - docker push $IMAGE_NAME
+    - docker push $CI_REGISTRY_IMAGE/libs:latest
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: manual
+
+# 3D packages - rebuild on schedule or manual
+build-packages3d:
+  stage: build
+  needs: ["build-base"]
+  script:
+    - PACKAGES_DATE=$(date +%Y%m%d)
+    - PACKAGES_TAG="packages3d-$PACKAGES_DATE"
+    - IMAGE_NAME="$CI_REGISTRY_IMAGE/packages3d:$PACKAGES_TAG"
+    # 3D packages change frequently, rebuild on schedule
+    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git packages3d || exit 1
+    - docker build --build-context packages3d-src=packages3d --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest -t $IMAGE_NAME -f docker/Dockerfile.packages3d .
+    - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/packages3d:latest
+    - docker push $IMAGE_NAME
+    - docker push $CI_REGISTRY_IMAGE/packages3d:latest
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: manual
+
+# Final KiCad build - uses all pre-built dependencies
+build-kicad:
+  stage: build
+  needs:
+    - job: build-base
+      optional: true
+    - job: build-wx
+      optional: true
+    - job: build-wxpython
+      optional: true
+    - job: build-ngspice
+      optional: true
+    - job: build-occt
+      optional: true
+    - job: build-libs
+      optional: true
+    - job: build-packages3d
+      optional: true
+  before_script:
+    # Install dependencies
+    - apk update && apk add --no-cache patch curl git
+    # Download s5cmd
+    - curl -LO https://github.com/peak/s5cmd/releases/download/v${S5CMD_VERSION}/s5cmd_${S5CMD_VERSION}_Linux-64bit.tar.gz
     - mkdir s5cmd
-    - tar -xvf ./s5cmd_2.0.0_Linux-64bit.tar.gz -C s5cmd
+    - tar -xvf ./s5cmd_${S5CMD_VERSION}_Linux-64bit.tar.gz -C s5cmd
+    # Set up environment
     - export AWS_ACCESS_KEY_ID=$KICAD_CI_R2_KEY_ID
     - export AWS_SECRET_ACCESS_KEY=$KICAD_CI_R2_ACCESS_KEY
     - export S3_ENDPOINT_URL=$KICAD_CI_R2_ENDPOINT
-    # Default to full build if variable not set
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
     - export KICAD_APPIMAGE_LIGHT=${KICAD_APPIMAGE_LIGHT:-false}
-
+    # Pull all dependency images
+    - docker pull $CI_REGISTRY_IMAGE/base:latest || echo "Base image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/wx:latest || echo "WX image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/wxpython:latest || echo "wxPython image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/ngspice:latest || echo "ngspice image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/occt:latest || echo "OCCT image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/libs:latest || echo "Libs image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/packages3d:latest || echo "3D packages image not found, will build"
   script:
-    # Get the KiCad source code, including up to 60 days of history in order to be able
-    # to build the AppImage with the correct version information but not too much history
-    - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master}
-    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git --branch=${KICAD_LIB_BRANCH:-master}
-    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git --branch=${KICAD_LIB_BRANCH:-master}
-    - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-templates.git --branch=${KICAD_LIB_BRANCH:-master}
-    # Only clone 3D packages if not building light version
-    - |
-      if [ "$KICAD_APPIMAGE_LIGHT" != "true" ]; then
-        git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git --branch=${KICAD_LIB_BRANCH:-master}
-      fi
-    - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=${NGSPICE_BRANCH:-ngspice-44.2}
-    - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=${OCCT_BRANCH:-V7_9_1}
-
-    # Use Dmitrii's fork of appimage-builder until the fix is merged
-    - |
-      git clone https://github.com/sethhillbrand/appimage-builder.git && \
-      git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse
-    - |
-      PACKAGES3D_CONTEXT=""
-      if [ "$KICAD_APPIMAGE_LIGHT" != "true" ]; then
-        PACKAGES3D_CONTEXT="--build-context packages3d-src=kicad-packages3D"
-      fi
-      docker buildx build \
+    - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master} || exit 1
+    - git clone https://github.com/sethhillbrand/appimage-builder.git && git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse || exit 1
+    - docker buildx build \
         --progress=plain \
         --build-context kicad-src=kicad \
-        --build-context symbols-src=kicad-symbols \
-        --build-context footprints-src=kicad-footprints \
-        --build-context templates-src=kicad-templates \
-        $PACKAGES3D_CONTEXT \
-        --build-context ngspice-src=ngspice \
-        --build-context occt-src=OCCT \
         --build-context appimage-builder-src=appimage-builder \
+        --build-arg REGISTRY=$CI_REGISTRY_IMAGE \
         --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
         --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
         --build-arg KICAD_APPIMAGE_LIGHT=$KICAD_APPIMAGE_LIGHT \
@@ -64,4 +234,7 @@ build-docker:
         --target appimage -o type=local,dest=. \
         -f Dockerfile .
     - s5cmd/s5cmd cp ./*.AppImage s3://$KICAD_CI_R2_BUCKET/appimage/
-
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: manual

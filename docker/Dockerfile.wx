@@ -1,0 +1,33 @@
+# Build wxWidgets
+ARG BASE_IMAGE
+ARG WX_VERSION
+
+FROM ${BASE_IMAGE} as build
+
+# Add metadata
+LABEL description="wxWidgets build for KiCad AppImage"
+LABEL wx.version=${WX_VERSION}
+
+# Download and extract wxWidgets
+ADD https://github.com/wxWidgets/wxWidgets/releases/download/v${WX_VERSION}/wxWidgets-${WX_VERSION}.tar.bz2 /tmp/wxWidgets.tar.bz2
+
+WORKDIR /tmp
+RUN <<'EOS'
+    set -euo pipefail
+    mkdir wxWidgets
+    tar xjf wxWidgets.tar.bz2 -C wxWidgets --strip-components=1
+    cd wxWidgets
+    cmake -G Ninja -B builddir -DCMAKE_INSTALL_PREFIX=/usr \
+        -DwxBUILD_SHARED=ON \
+        -DwxBUILD_TOOLKIT=gtk3 \
+        -DwxUSE_OPENGL=ON \
+        -DwxUSE_GLCANVAS_EGL=OFF \
+        -DCMAKE_BUILD_TYPE=Release
+EOS
+
+WORKDIR /tmp/wxWidgets
+RUN ninja -C builddir -j$(nproc)
+RUN DESTDIR=/tmp/rootfs cmake --install builddir
+
+FROM scratch
+COPY --from=build /tmp/rootfs /

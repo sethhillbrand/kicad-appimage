@@ -1,0 +1,14 @@
+# Build KiCad 3D packages library
+ARG BASE_IMAGE
+
+FROM ${BASE_IMAGE} as build
+
+# Add metadata
+LABEL description="KiCad 3D packages library"
+
+# Copy 3D packages source from build context
+COPY --from=packages3d-src . /src
+RUN /build-library.sh
+
+FROM scratch
+COPY --from=build /usr/installtemp /usr/installtemp
