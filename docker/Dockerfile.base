@@ -30,6 +30,7 @@ RUN <<-EOPKG
         libprotobuf-dev \
         libspnav-dev \
         libtool \
+        libwebkit2gtk-4.0-dev \
         libzint-dev \
         protobuf-compiler \
         swig4.0 \
