@@ -59,7 +59,7 @@ build-wx:
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/wx:$WX_TAG"
     # Check if this version already exists
     - |
-      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
         echo "wxWidgets $WX_VERSION already built, syncing latest tag (remote)"
         docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/wx:latest" "$IMAGE_NAME"
         exit 0
@@ -79,7 +79,7 @@ build-wxpython:
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/wxpython:$WXPY_TAG"
     # Check if this version already exists
     - |
-      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
         echo "wxPython $WXPYTHON_VERSION already built, syncing latest tag (remote)"
         docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/wxpython:latest" "$IMAGE_NAME"
         exit 0
@@ -99,7 +99,7 @@ build-occt:
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/occt:$OCCT_TAG"
     # Check if this version already exists
     - |
-      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
         echo "OCCT $OCCT_VERSION already built, syncing latest tag (remote)"
         docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/occt:latest" "$IMAGE_NAME"
         exit 0
@@ -121,7 +121,7 @@ build-ngspice:
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/ngspice:$NGSPICE_TAG"
     # Check if this commit already exists
     - |
-      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1; then
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
         echo "ngspice commit $NGSPICE_COMMIT already built, syncing latest tag (remote)"
         docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/ngspice:latest" "$IMAGE_NAME"
         exit 0
