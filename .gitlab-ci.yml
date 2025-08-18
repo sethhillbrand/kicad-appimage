@@ -204,17 +204,17 @@ build-kicad:
     - echo "Registry arg will be '$CI_REGISTRY_IMAGE'"
     - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master} || exit 1
     - git clone https://github.com/sethhillbrand/appimage-builder.git && git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse || exit 1
-    - docker buildx build \
-        --progress=plain --build-context kicad-src=kicad \
-        --build-context appimage-builder-src=appimage-builder \
-        --build-arg REGISTRY=$CI_REGISTRY_IMAGE \
-        --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
-        --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
-        --platform linux/amd64 \
-        --target build-kicad \
-        --cache-to type=local,dest=build-cache \
-        -o type=local,dest=. \
-        -f Dockerfile .
+    - docker buildx build
+      --progress=plain --build-context kicad-src=kicad
+      --build-context appimage-builder-src=appimage-builder
+      --build-arg REGISTRY=$CI_REGISTRY_IMAGE
+      --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
+      --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d)
+      --platform linux/amd64
+      --target build-kicad
+      --cache-to type=local,dest=build-cache
+      -o type=local,dest=.
+      -f Dockerfile .
   artifacts:
     paths:
       - '*.AppImage'
@@ -256,17 +256,17 @@ build-kicad-light:
     - echo "Registry arg will be '$CI_REGISTRY_IMAGE'"
     - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master} || exit 1
     - git clone https://github.com/sethhillbrand/appimage-builder.git && git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse || exit 1
-    - docker buildx build \
-        --progress=plain --build-context kicad-src=kicad \
-        --build-context appimage-builder-src=appimage-builder \
-        --build-arg REGISTRY=$CI_REGISTRY_IMAGE \
-        --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
-        --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
-        --platform linux/amd64 \
-        --target build-kicad-light \
-        --cache-from type=local,src=build-cache \
-        -o type=local,dest=. \
-        -f Dockerfile .
+    - docker buildx build
+      --progress=plain --build-context kicad-src=kicad
+      --build-context appimage-builder-src=appimage-builder
+      --build-arg REGISTRY=$CI_REGISTRY_IMAGE
+      --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
+      --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d)
+      --platform linux/amd64
+      --target build-kicad-light
+      --cache-from type=local,src=build-cache
+      -o type=local,dest=.
+      -f Dockerfile .
   artifacts:
     paths:
       - '*.AppImage'
