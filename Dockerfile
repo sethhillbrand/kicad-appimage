@@ -14,7 +14,6 @@ FROM ${REGISTRY}/packages3d:latest AS packages3d
 FROM base AS kicad-build
 
 ARG KICAD_BUILD_RELEASE=nightly
-ARG KICAD_APPIMAGE_LIGHT=false
 
 # Copy all dependencies
 COPY --from=wx / /
@@ -22,7 +21,6 @@ COPY --from=wxpython / /
 COPY --from=ngspice / /
 COPY --from=occt / /
 COPY --from=libs / /
-COPY --from=packages3d / /
 
 # Copy KiCad source and appimage-builder
 COPY --from=kicad-src . /tmp/kicad
@@ -43,10 +41,9 @@ RUN <<'EOS'
     DESTDIR=/tmp/AppDir ninja install
 EOS
 
-# AppImage build stage
-FROM base AS appimage
+# AppImage base stage
+FROM base AS appimage-base
 ARG KICAD_BUILD_RELEASE
-ARG KICAD_APPIMAGE_LIGHT
 
 # Install appimage-builder
 COPY --from=appimage-builder-src . /tmp/appimage-builder
@@ -65,11 +62,12 @@ WORKDIR /tmp
 ENV KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE}
 ENV KICAD_BUILD_MAJVERSION=8
 ENV KICAD_BUILD_DEBUG=false
-ENV KICAD_APPIMAGE_LIGHT=${KICAD_APPIMAGE_LIGHT}
 
-# Build AppImage
+# Build standard AppImage (zstd)
+FROM appimage-base AS appimage
+COPY --from=packages3d / /
+
 RUN <<'EOS'
-    # Create launcher script
     mkdir -p AppDir/usr/bin
     cat > AppDir/usr/bin/kicad.sh << 'EOF'
 #!/bin/bash
@@ -77,18 +75,26 @@ export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
 exec "${APPDIR}/usr/bin/kicad" "$@"
 EOF
     chmod +x AppDir/usr/bin/kicad.sh
-
-    # Set compression based on LIGHT mode
-    if [ "${KICAD_APPIMAGE_LIGHT}" = "true" ]; then
-        export COMP_TYPE="gzip"
-    else
-        export COMP_TYPE="zstd"
-    fi
-
-    # Build AppImage
-    appimage-builder --comp ${COMP_TYPE}
+    export COMP_TYPE=zstd
+    appimage-builder
 EOS
 
-# Final stage - extract AppImage
-FROM scratch
+FROM scratch AS build-kicad
 COPY --from=appimage /tmp/*.AppImage /
+
+# Build light AppImage (gzip)
+FROM appimage-base AS appimage-light
+RUN <<'EOS'
+    mkdir -p AppDir/usr/bin
+    cat > AppDir/usr/bin/kicad.sh << 'EOF'
+#!/bin/bash
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+exec "${APPDIR}/usr/bin/kicad" "$@"
+EOF
+    chmod +x AppDir/usr/bin/kicad.sh
+    export COMP_TYPE=gzip
+    appimage-builder
+EOS
+
+FROM scratch AS build-kicad-light
+COPY --from=appimage-light /tmp/*.AppImage /

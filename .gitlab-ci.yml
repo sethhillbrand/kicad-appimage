@@ -12,6 +12,7 @@ variables:
 
 stages:
   - build
+  - upload
 
 default:
   tags:
@@ -188,13 +189,8 @@ build-kicad:
       optional: true
   before_script:
     # Install dependencies
-    - apk update && apk add --no-cache patch rclone git
-    # Set up environment
-    - rclone config create r2 s3 env_auth=true provider=Other endpoint=$KICAD_CI_R2_ENDPOINT
-    - export RCLONE_CONFIG_R2_ACCESS_KEY_ID=$KICAD_CI_R2_KEY_ID
-    - export RCLONE_CONFIG_R2_SECRET_ACCESS_KEY=$KICAD_CI_R2_ACCESS_KEY
+    - apk update && apk add --no-cache patch git
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - export KICAD_APPIMAGE_LIGHT=${KICAD_APPIMAGE_LIGHT:-false}
     # Pull all dependency images
     - docker pull $CI_REGISTRY_IMAGE/base:latest || echo "Base image not found, will build"
     - docker pull $CI_REGISTRY_IMAGE/wx:latest || echo "WX image not found, will build"
@@ -208,12 +204,87 @@ build-kicad:
     - echo "Registry arg will be '$CI_REGISTRY_IMAGE'"
     - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master} || exit 1
     - git clone https://github.com/sethhillbrand/appimage-builder.git && git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse || exit 1
-    - docker buildx build
-      --progress=plain --build-context kicad-src=kicad
-      --build-context appimage-builder-src=appimage-builder
-      --build-arg REGISTRY=$CI_REGISTRY_IMAGE
-      --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
-      --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d)
-      --build-arg KICAD_APPIMAGE_LIGHT=$KICAD_APPIMAGE_LIGHT
-      --platform linux/amd64 --target appimage -o type=local,dest=. -f Dockerfile .
-    - rclone copy ./*.AppImage r2:$KICAD_CI_R2_BUCKET/appimage/
+    - docker buildx build \
+        --progress=plain --build-context kicad-src=kicad \
+        --build-context appimage-builder-src=appimage-builder \
+        --build-arg REGISTRY=$CI_REGISTRY_IMAGE \
+        --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
+        --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
+        --platform linux/amd64 \
+        --target build-kicad \
+        --cache-to type=local,dest=build-cache \
+        -o type=local,dest=. \
+        -f Dockerfile .
+  artifacts:
+    paths:
+      - '*.AppImage'
+      - build-cache
+
+build-kicad-light:
+  stage: build
+  needs:
+    - job: build-kicad
+      artifacts: true
+    - job: build-base
+      optional: true
+    - job: build-wx
+      optional: true
+    - job: build-wxpython
+      optional: true
+    - job: build-ngspice
+      optional: true
+    - job: build-occt
+      optional: true
+    - job: build-libs
+      optional: true
+    - job: build-packages3d
+      optional: true
+  before_script:
+    # Install dependencies
+    - apk update && apk add --no-cache patch git
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    # Pull all dependency images
+    - docker pull $CI_REGISTRY_IMAGE/base:latest || echo "Base image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/wx:latest || echo "WX image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/wxpython:latest || echo "wxPython image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/ngspice:latest || echo "ngspice image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/occt:latest || echo "OCCT image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/libs:latest || echo "Libs image not found, will build"
+    - docker pull $CI_REGISTRY_IMAGE/packages3d:latest || echo "3D packages image not found, will build"
+  script:
+    - echo "CI_REGISTRY_IMAGE is '$CI_REGISTRY_IMAGE'"
+    - echo "Registry arg will be '$CI_REGISTRY_IMAGE'"
+    - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master} || exit 1
+    - git clone https://github.com/sethhillbrand/appimage-builder.git && git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse || exit 1
+    - docker buildx build \
+        --progress=plain --build-context kicad-src=kicad \
+        --build-context appimage-builder-src=appimage-builder \
+        --build-arg REGISTRY=$CI_REGISTRY_IMAGE \
+        --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 \
+        --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d) \
+        --platform linux/amd64 \
+        --target build-kicad-light \
+        --cache-from type=local,src=build-cache \
+        -o type=local,dest=. \
+        -f Dockerfile .
+  artifacts:
+    paths:
+      - '*.AppImage'
+
+upload-kicad:
+  stage: upload
+  needs:
+    - job: build-kicad
+      artifacts: true
+    - job: build-kicad-light
+      artifacts: true
+  image: alpine:latest
+  services: []
+  before_script:
+    - apk add --no-cache s3cmd
+  script:
+    - for f in *.AppImage; do \
+        s3cmd put --host s3.cern.ch --host-bucket '%(bucket)s.s3.cern.ch' \
+          --access_key="$S3_ACCESS_KEY" --secret_key="$S3_SECRET_KEY" \
+          "$f" "s3://kicad-downloads/$BUCKET_OUTPUT_PATH/"; \
+      done
