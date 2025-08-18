@@ -37,9 +37,6 @@ RUN <<'EOS'
     cmake -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
-        -DKICAD_SCRIPTING_WXPYTHON=ON \
-        -DKICAD_USE_OCC=ON \
-        -DKICAD_SPICE=ON \
         -DDEFAULT_INSTALL_PATH=/usr \
         ..
     ninja -j$(nproc)

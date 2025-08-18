@@ -14,7 +14,7 @@ RUN <<'EOS'
     mkdir build
     cd build
     cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release \
-        -DINSTALL_DIR_LIB:PATH=lib/x86_64 \
+        -DINSTALL_DIR_LIB:PATH=usr/opencascade \
         -DINSTALL_DIR_CMAKE:PATH=lib/x86_64/cmake/opencascade \
         -DUSE_RAPIDJSON:BOOL=ON \
         -DUSE_TBB:BOOL=ON \
