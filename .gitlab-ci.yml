@@ -14,7 +14,8 @@ variables:
   DOCKER_TLS_CERTDIR: "/certs"
 
 stages:
-  - build_deps
+  - base
+  - deps
   - build
   - upload
 
@@ -31,11 +32,11 @@ stages:
 
 # Standard dependency rules (always run when dependencies succeed)
 .dependency_rules: &dependency_rules
-  stage: build_deps
+  stage: deps
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: always
-      needs: ["build-base"]
+      needs: ["base"]
     - when: manual
       needs: []
     - when: on_success
@@ -60,7 +61,7 @@ default:
 # Base image - foundational dependencies
 build-base:
   <<: *base_rules
-  stage: build_deps
+  stage: base
   script:
     - BASE_TAG="base-$(date +%Y%m%d)-$CI_COMMIT_SHORT_SHA"
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/base:$BASE_TAG"
@@ -95,11 +96,11 @@ build-wx:
 
 # wxPython - depends on wx
 build-wxpython:
-  stage: build_deps
+  stage: deps
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: always
-      needs: ["build-base", "build-wx"]
+      needs: ["build-wx"]
     - when: manual
       needs: []
     - when: on_success
@@ -207,27 +208,11 @@ build-packages3d:
 # Final KiCad build - uses all pre-built dependencies
 build-kicad:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: on_success
-      needs:
-        - job: build-base
-          optional: true
-        - job: build-wx
-          optional: true
-        - job: build-wxpython
-          optional: true
-        - job: build-ngspice
-          optional: true
-        - job: build-occt
-          optional: true
-        - job: build-libs
-          optional: true
-        - job: build-packages3d
-          optional: true
-    - when: manual
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
       needs: []
     - when: on_success
-      needs: ["build-base", "build-wx", "build-wxpython", "build-ngspice", "build-occt", "build-libs", "build-packages3d"]
+      needs: ["deps"]
   stage: build
   before_script:
     # Install dependencies
@@ -267,25 +252,11 @@ build-kicad:
 
 build-kicad-light:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: on_success
-      needs:
-        - job: build-base
-          optional: true
-        - job: build-wx
-          optional: true
-        - job: build-wxpython
-          optional: true
-        - job: build-ngspice
-          optional: true
-        - job: build-occt
-          optional: true
-        - job: build-libs
-          optional: true
-    - when: manual
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
       needs: []
     - when: on_success
-      needs: ["build-base", "build-wx", "build-wxpython", "build-ngspice", "build-occt", "build-libs"]
+      needs: ["deps"]
   stage: build
   before_script:
     # Install dependencies
