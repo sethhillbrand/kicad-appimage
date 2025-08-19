@@ -20,6 +20,7 @@ AppDir:
 
     include:
       - bash
+      - coreutils
       - dash
       - debian-archive-keyring
       - ca-certificates
@@ -144,5 +145,4 @@ AppDir:
 
 AppImage:
   arch: x86_64
-  update-information: guess
   comp: ${COMP_TYPE}
