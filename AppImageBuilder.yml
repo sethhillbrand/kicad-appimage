@@ -81,11 +81,10 @@ AppDir:
       - libglew2.2
       - libglu1-mesa
       - libnng1
-      - libpoppler-glib8t64
+      - libpoppler-glib8
       - libprotobuf32
       - libsecret-1-0
       - libspnav0
-      - libzint2.15
       - libzstd1
       - shared-mime-info
       - unixodbc
@@ -146,4 +145,4 @@ AppDir:
 AppImage:
   arch: x86_64
   update-information: guess
-  comp: ${COMP_TYPE:-zstd}  # Allow override from environment
+  comp: ${COMP_TYPE}
