@@ -22,7 +22,8 @@ default:
     - docker:28-dind
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker buildx create --use --driver docker-container
+    - docker context create builder-context
+    - docker buildx create --use --driver docker-container --name builder builder-context
     - docker buildx inspect --bootstrap
 
 # Shared rules for dependency builds
