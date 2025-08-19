@@ -71,7 +71,6 @@ apt-get install -y --no-install-recommends \
     # Clean up to reduce image size
     apt-get clean autoclean
     apt-get autoremove -y
-    rm -rf /var/lib/apt/lists/*
     # Upgrade pip and install essential Python packages
     python3 -m pip install --break-system-packages --upgrade pip setuptools wheel build packaging
 EOPKG
