@@ -36,8 +36,9 @@ stages:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: always
-      needs: ["base"]
-    - when: manual
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+      allow_failure: true
       needs: []
     - when: on_success
 
@@ -101,8 +102,6 @@ build-wxpython:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: always
       needs: ["build-wx"]
-    - when: manual
-      needs: []
     - when: on_success
   script:
     - WXPY_TAG="wxpython-$WXPYTHON_VERSION"
@@ -207,12 +206,6 @@ build-packages3d:
 
 # Final KiCad build - uses all pre-built dependencies
 build-kicad:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "web"'
-      when: manual
-      needs: []
-    - when: on_success
-      needs: ["deps"]
   stage: build
   before_script:
     # Install dependencies
@@ -252,11 +245,8 @@ build-kicad:
 
 build-kicad-light:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "web"'
-      when: manual
-      needs: []
     - when: on_success
-      needs: ["deps"]
+      needs: ["build-kicad"]
   stage: build
   before_script:
     # Install dependencies
