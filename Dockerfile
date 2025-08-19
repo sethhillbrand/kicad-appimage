@@ -72,7 +72,8 @@ COPY --from=packages3d / /
 
 # Set KICAD_BUILD_DEBUG based on KICAD_BUILD_TYPE
 ARG KICAD_BUILD_TYPE
-RUN if [ "$KICAD_BUILD_TYPE" = "Debug" ]; then export KICAD_BUILD_DEBUG=1; else export KICAD_BUILD_DEBUG=0; fi && \
+RUN <<'EOS'
+if [ "$KICAD_BUILD_TYPE" = "Debug" ]; then export KICAD_BUILD_DEBUG=1; else export KICAD_BUILD_DEBUG=0; fi && \
     mkdir -p AppDir/usr/bin && \
     cat > AppDir/usr/bin/kicad.sh << 'EOF'
 #!/bin/bash
@@ -90,7 +91,8 @@ COPY --from=appimage /tmp/*.AppImage /
 # Build light AppImage (gzip)
 FROM appimage-base AS appimage-light
 ARG KICAD_BUILD_TYPE
-RUN if [ "$KICAD_BUILD_TYPE" = "Debug" ]; then export KICAD_BUILD_DEBUG=1; else export KICAD_BUILD_DEBUG=0; fi && \
+RUN <<'EOS'
+if [ "$KICAD_BUILD_TYPE" = "Debug" ]; then export KICAD_BUILD_DEBUG=1; else export KICAD_BUILD_DEBUG=0; fi && \
     mkdir -p AppDir/usr/bin && \
     cat > AppDir/usr/bin/kicad.sh << 'EOF'
 #!/bin/bash
