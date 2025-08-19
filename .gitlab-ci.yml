@@ -9,6 +9,9 @@ variables:
   WXPYTHON_VERSION: "4.2.3"
   NGSPICE_VERSION: "44.2"
   S5CMD_VERSION: "2.0.0"
+  # Docker TLS configuration for buildx
+  DOCKER_HOST: tcp://docker:2376
+  DOCKER_TLS_CERTDIR: "/certs"
 
 stages:
   - build
@@ -22,8 +25,8 @@ default:
     - docker:28-dind
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker context create builder-context
-    - docker buildx create --use --driver docker-container --name builder builder-context
+    - docker context create ki-builder
+    - docker buildx create ki-builder --driver docker-container --use
     - docker buildx inspect --bootstrap
 
 # Shared rules for dependency builds
@@ -194,6 +197,9 @@ build-kicad:
     # Install dependencies
     - apk update && apk add --no-cache patch git
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker context create ki-builder
+    - docker buildx create ki-builder --driver docker-container --use
+    - docker buildx inspect --bootstrap
     # Pull all dependency images
     - docker pull $CI_REGISTRY_IMAGE/base:latest || echo "Base image not found, will build"
     - docker pull $CI_REGISTRY_IMAGE/wx:latest || echo "WX image not found, will build"
@@ -215,13 +221,13 @@ build-kicad:
       --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d)
       --platform linux/amd64
       --target build-kicad
-      --cache-to type=local,dest=build-cache
+      --cache-to type=registry,ref=$CI_REGISTRY_IMAGE/cache:buildcache,mode=max
+      --cache-from type=registry,ref=$CI_REGISTRY_IMAGE/cache:buildcache
       -o type=local,dest=.
       -f Dockerfile .
   artifacts:
     paths:
       - '*.AppImage'
-      - build-cache
 
 build-kicad-light:
   stage: build
@@ -246,6 +252,9 @@ build-kicad-light:
     # Install dependencies
     - apk update && apk add --no-cache patch git
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker context create ki-builder
+    - docker buildx create ki-builder --driver docker-container --use
+    - docker buildx inspect --bootstrap
     # Pull all dependency images
     - docker pull $CI_REGISTRY_IMAGE/base:latest || echo "Base image not found, will build"
     - docker pull $CI_REGISTRY_IMAGE/wx:latest || echo "WX image not found, will build"
@@ -267,7 +276,7 @@ build-kicad-light:
       --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d)
       --platform linux/amd64
       --target build-kicad-light
-      --cache-from type=local,src=build-cache
+      --cache-from type=registry,ref=$CI_REGISTRY_IMAGE/cache:buildcache
       -o type=local,dest=.
       -f Dockerfile .
   artifacts:
