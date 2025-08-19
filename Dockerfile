@@ -50,6 +50,22 @@ COPY --from=appimage-builder-src . /tmp/appimage-builder
 WORKDIR /tmp/appimage-builder
 RUN python3 -m pip install --break-system-packages .
 
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    python3-setuptools \
+    python3-wheel \
+    fakeroot \
+    dpkg-dev \
+    libc6-dev \
+    build-essential \
+    file \
+    desktop-file-utils \
+    patchelf \
+    squashfs-tools \
+    zsync \
+    strace \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy built KiCad
 COPY --from=kicad-build /tmp/AppDir /tmp/AppDir
 

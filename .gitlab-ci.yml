@@ -54,11 +54,6 @@ default:
     - docker buildx create ki-builder --driver docker-container --use
     - docker buildx inspect --bootstrap
 
-# Shared rules for dependency builds
-.dependency_rules: &dependency_rules
-  rules:
-    - when: on_success
-
 # Base image - foundational dependencies
 build-base:
   <<: *base_rules
