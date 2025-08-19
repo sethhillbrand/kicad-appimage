@@ -7,10 +7,11 @@ LABEL description="Base build environment for KiCad AppImage"
 # Install build dependencies and clean apt cache in a single layer
 RUN <<-EOPKG
     apt-get update
-apt-get install -y --no-install-recommends \
+    apt-get install -y --no-install-recommends \
     autoconf automake bison build-essential \
     ca-certificates cmake \
     curl \
+    debian-archive-keyring \
     desktop-file-utils \
     dpkg-dev \
     fakeroot \
