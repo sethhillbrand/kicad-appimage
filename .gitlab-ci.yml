@@ -17,6 +17,31 @@ stages:
   - build
   - upload
 
+# ============================================================================
+# SHARED RULES AND TEMPLATES
+# ============================================================================
+
+# Base rules for foundational jobs (schedule: always, manual: manual)
+.base_rules: &base_rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    - when: manual
+
+# Standard dependency rules (always run when dependencies succeed)
+.dependency_rules: &dependency_rules
+  rules:
+    - when: on_success
+
+# Template for jobs that need sequential scheduling but manual independence
+.sequential_job_template: &sequential_job_template
+  stage: build
+  # Individual jobs override rules with specific needs for schedule vs manual
+
+# ============================================================================
+# BUILD JOBS
+# ============================================================================
+
 default:
   tags:
     - kicad-dind
@@ -36,7 +61,7 @@ default:
 
 # Base image - foundational dependencies
 build-base:
-  <<: *dependency_rules
+  <<: *base_rules
   stage: build
   script:
     - BASE_TAG="base-$(date +%Y%m%d)-$CI_COMMIT_SHORT_SHA"
@@ -51,16 +76,16 @@ build-base:
     - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/base:latest
     - docker push $IMAGE_NAME
     - docker push $CI_REGISTRY_IMAGE/base:latest
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-      when: always
-    - when: manual
 
 # wxWidgets - version-pinned rebuild
 build-wx:
-  <<: *dependency_rules
-  stage: build
-  needs: ["build-base"]
+  <<: *sequential_job_template
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      needs: ["build-base"]
+    - when: manual
+      needs: []
   script:
     - WX_TAG="wx-$WX_VERSION"
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/wx:$WX_TAG"
@@ -78,9 +103,13 @@ build-wx:
 
 # wxPython - depends on wx
 build-wxpython:
-  <<: *dependency_rules
   stage: build
-  needs: ["build-base", "build-wx"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      needs: ["build-base", "build-wx"]
+    - when: manual
+      needs: []
   script:
     - WXPY_TAG="wxpython-$WXPYTHON_VERSION"
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/wxpython:$WXPY_TAG"
@@ -98,9 +127,13 @@ build-wxpython:
 
 # OCCT - version-pinned rebuild
 build-occt:
-  <<: *dependency_rules
   stage: build
-  needs: ["build-base"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      needs: ["build-base"]
+    - when: manual
+      needs: []
   script:
     - OCCT_TAG="occt-$OCCT_VERSION"
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/occt:$OCCT_TAG"
@@ -119,21 +152,24 @@ build-occt:
 
 # ngspice - git hash-based rebuild
 build-ngspice:
-  <<: *dependency_rules
   stage: build
-  needs: ["build-base"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      needs: ["build-base"]
+    - when: manual
+      needs: []
   script:
-    - NGSPICE_COMMIT=$(git ls-remote https://git.code.sf.net/p/ngspice/ngspice.git HEAD | cut -f1 | cut -c1-8)
     - NGSPICE_TAG="ngspice-$NGSPICE_VERSION"
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/ngspice:$NGSPICE_TAG"
-    # Check if this commit already exists
+    # Check if this version already exists
     - |
       if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
-        echo "ngspice commit $NGSPICE_COMMIT already built, syncing latest tag (remote)"
+        echo "ngspice $NGSPICE_VERSION already built, syncing latest tag (remote)"
         docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/ngspice:latest" "$IMAGE_NAME"
         exit 0
       fi
-    - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=${NGSPICE_TAG:-$NGSPICE_COMMIT} ngspice || exit 1
+    - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=$NGSPICE_VERSION ngspice || exit 1
     - docker build --build-context ngspice-src=ngspice --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest -t $IMAGE_NAME -f docker/Dockerfile.ngspice .
     - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/ngspice:latest
     - docker push $IMAGE_NAME
@@ -142,11 +178,23 @@ build-ngspice:
 # KiCad libraries - rebuild on schedule or manual
 build-libs:
   stage: build
-  needs: ["build-base"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      needs: ["build-base"]
+    - when: manual
+      needs: []
   script:
     - LIBS_DATE=$(date +%Y%m%d)
     - LIBS_TAG="libs-$LIBS_DATE"
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/libs:$LIBS_TAG"
+    # Check if today's libraries are already built
+    - |
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
+        echo "Libraries for $LIBS_DATE already built, syncing latest tag (remote)"
+        docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/libs:latest" "$IMAGE_NAME"
+        exit 0
+      fi
     # Libraries change frequently, rebuild on schedule
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-symbols.git symbols || exit 1
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-footprints.git footprints || exit 1
@@ -163,11 +211,23 @@ build-libs:
 # 3D packages - rebuild on schedule or manual
 build-packages3d:
   stage: build
-  needs: ["build-base"]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      needs: ["build-base"]
+    - when: manual
+      needs: []
   script:
     - PACKAGES_DATE=$(date +%Y%m%d)
     - PACKAGES_TAG="packages3d-$PACKAGES_DATE"
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/packages3d:$PACKAGES_TAG"
+    # Check if today's 3D packages are already built
+    - |
+      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
+        echo "3D packages for $PACKAGES_DATE already built, syncing latest tag (remote)"
+        docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/packages3d:latest" "$IMAGE_NAME"
+        exit 0
+      fi
     # 3D packages change frequently, rebuild on schedule
     - git clone --depth=1 https://gitlab.com/kicad/libraries/kicad-packages3D.git packages3d || exit 1
     - docker build --build-context packages3d-src=packages3d --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest -t $IMAGE_NAME -f docker/Dockerfile.packages3d .
@@ -177,6 +237,7 @@ build-packages3d:
 
 # Final KiCad build - uses all pre-built dependencies
 build-kicad:
+  <<: *dependency_rules
   stage: build
   needs:
     - job: build-base
@@ -230,6 +291,7 @@ build-kicad:
       - '*.AppImage'
 
 build-kicad-light:
+  <<: *dependency_rules
   stage: build
   needs:
     - job: build-kicad
@@ -284,6 +346,7 @@ build-kicad-light:
       - '*.AppImage'
 
 upload-kicad:
+  <<: *dependency_rules
   stage: upload
   needs:
     - job: build-kicad
