@@ -121,7 +121,7 @@ AppDir:
       - usr/share/opencascade/data
       - usr/share/opencascade/samples
 
-  test:
+  # test:
     # Uncomment to enable testing on different distributions
     # debian:
     #   image: appimagecrafters/tests-env:debian-stable
