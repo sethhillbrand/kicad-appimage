@@ -50,6 +50,10 @@ COPY --from=appimage-builder-src . /tmp/appimage-builder
 WORKDIR /tmp/appimage-builder
 RUN python3 -m pip install --break-system-packages .
 
+RUN gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131 78DBA3BC47EF2265
+RUN gpg --export 6ED0E7B82643E131 | tee /etc/apt/trusted.gpg.d/6ED0E7B82643E131.gpg >/dev/null
+RUN gpg --export 78DBA3BC47EF2265 | tee /etc/apt/trusted.gpg.d/78DBA3BC47EF2265.gpg >/dev/null
+RUN chmod 0644 /etc/apt/trusted.gpg.d/*.gpg
 RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-setuptools \
