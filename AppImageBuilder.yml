@@ -25,22 +25,22 @@ AppDir:
       - bash
       - dash
       - git
-      - sudo
       - librsvg2-common # gdk-pixbuf
+      - sudo
 
       # HACK: this breaks Wayland support, but GTK needs it with Wayland < 1.20, as it always links against it
       # For now we do not consider Wayland support as it's WIP in KiCad, and later we might consider removing support for Ubuntu 20.04
-      - libwayland-egl1
       - libwayland-client0
       - libwayland-cursor0
+      - libwayland-egl1
 
       # Dependencies of wxGTK and wxPython we provide in the AppDir
       - libbz2-1.0
       - libcairo2
       - libexpat1
       - libfontconfig1
-      - libgdk-pixbuf-2.0-0
       - libgcc-s1
+      - libgdk-pixbuf-2.0-0
       - libglib2.0-0
       - libgtk-3-0
       - libjpeg62-turbo
@@ -56,19 +56,19 @@ AppDir:
       - libxtst6
 
       - libpython3.11
-      - python3
       - python-is-python3
-      - python3-yaml
-      - python3-typing-extensions
+      - python3
       - python3-numpy
       - python3-pil
       - python3-six
+      - python3-typing-extensions
+      - python3-yaml
 
       # Dependencies of OCCT
+      - libhwloc15
       - libtbb12
       - libtbbbind-2-5
       - libtbbmalloc2
-      - libhwloc15
 
       # Dependencies of ngspice
       - libgomp1
@@ -77,18 +77,21 @@ AppDir:
 
       # Dependencies of KiCad
       - libcurl4-gnutls-dev
-      - libglu1-mesa
-      - libglew2.2
-      - libpoppler-glib8t64
-      - unixodbc
-      - zlib1g
-      - shared-mime-info
       - libgit2-1.5
-      - libsecret-1-0
-      - libprotobuf32
-      - libzstd1
+      - libglew2.2
+      - libglu1-mesa
       - libnng1
+      - libpoppler-glib8t64
+      - libprotobuf32
+      - libsecret-1-0
       - libspnav0
+      - libzint2.15
+      - libzstd1
+      - shared-mime-info
+      - unixodbc
+      - zint
+      - zlib1g
+
 
     exclude:
       - adwaita-icon-theme

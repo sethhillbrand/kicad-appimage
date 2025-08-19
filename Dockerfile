@@ -14,6 +14,7 @@ FROM ${REGISTRY}/packages3d:latest AS packages3d
 FROM base AS kicad-build
 
 ARG KICAD_BUILD_RELEASE=nightly
+ARG KICAD_BUILD_TYPE=RelWithDebInfo
 
 # Copy all dependencies
 COPY --from=wx / /
@@ -33,7 +34,7 @@ RUN <<'EOS'
     mkdir build
     cd build
     cmake -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE=${KICAD_BUILD_TYPE} \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DDEFAULT_INSTALL_PATH=/usr \
         ..
@@ -44,6 +45,8 @@ EOS
 # AppImage base stage
 FROM base AS appimage-base
 ARG KICAD_BUILD_RELEASE
+ARG KICAD_BUILD_MAJVERSION
+ARG KICAD_BUILD_TYPE
 
 # Install appimage-builder
 COPY --from=appimage-builder-src . /tmp/appimage-builder
@@ -60,15 +63,17 @@ WORKDIR /tmp
 
 # Set environment variables for AppImage build
 ENV KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE}
-ENV KICAD_BUILD_MAJVERSION=8
-ENV KICAD_BUILD_DEBUG=false
+ENV KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION}
+ENV KICAD_BUILD_TYPE=${KICAD_BUILD_TYPE}
 
 # Build standard AppImage (zstd)
 FROM appimage-base AS appimage
 COPY --from=packages3d / /
 
-RUN <<'EOS'
-    mkdir -p AppDir/usr/bin
+# Set KICAD_BUILD_DEBUG based on KICAD_BUILD_TYPE
+ARG KICAD_BUILD_TYPE
+RUN if [ "$KICAD_BUILD_TYPE" = "Debug" ]; then export KICAD_BUILD_DEBUG=1; else export KICAD_BUILD_DEBUG=0; fi && \
+    mkdir -p AppDir/usr/bin && \
     cat > AppDir/usr/bin/kicad.sh << 'EOF'
 #!/bin/bash
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
@@ -84,8 +89,9 @@ COPY --from=appimage /tmp/*.AppImage /
 
 # Build light AppImage (gzip)
 FROM appimage-base AS appimage-light
-RUN <<'EOS'
-    mkdir -p AppDir/usr/bin
+ARG KICAD_BUILD_TYPE
+RUN if [ "$KICAD_BUILD_TYPE" = "Debug" ]; then export KICAD_BUILD_DEBUG=1; else export KICAD_BUILD_DEBUG=0; fi && \
+    mkdir -p AppDir/usr/bin && \
     cat > AppDir/usr/bin/kicad.sh << 'EOF'
 #!/bin/bash
 export LD_LIBRARY_PATH="${APPDIR}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"

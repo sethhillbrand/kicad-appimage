@@ -3,6 +3,9 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "schedule"'
 
 variables:
+  KICAD_BUILD_TYPE: ${KICAD_BUILD_TYPE:-"Nightly"}
+  KICAD_BRANCH: ${KICAD_BRANCH:-"master"}
+  KICAD_BUILD_RELEASE: ${KICAD_BUILD_RELEASE:-"nightly-$(date +%Y%m%d)"}
   # Version pins for reproducible builds
   WX_VERSION: "3.2.8.1"
   OCCT_VERSION: "V7_9_1"
@@ -98,10 +101,10 @@ build-wx:
 # wxPython - depends on wx
 build-wxpython:
   stage: deps
+  needs: ["build-wx"]
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: always
-      needs: ["build-wx"]
     - when: on_success
   script:
     - WXPY_TAG="wxpython-$WXPYTHON_VERSION"
@@ -131,7 +134,7 @@ build-occt:
         docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/occt:latest" "$IMAGE_NAME"
         exit 0
       fi
-    - git clone --depth=1 https://github.com/Open-Cascade-SAS/OCCT.git --branch=${OCCT_BRANCH:-$OCCT_VERSION} occt || exit 1
+    - git clone --depth=1 --branch=${OCCT_BRANCH:-$OCCT_VERSION} --single-branch --filter=blob:none https://github.com/Open-Cascade-SAS/OCCT.git occt || exit 1
     - docker build --build-context occt-src=occt --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest -t $IMAGE_NAME -f docker/Dockerfile.occt .
     - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/occt:latest
     - docker push $IMAGE_NAME
@@ -150,7 +153,7 @@ build-ngspice:
         docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/ngspice:latest" "$IMAGE_NAME"
         exit 0
       fi
-    - git clone --depth=1 https://git.code.sf.net/p/ngspice/ngspice.git --branch=$NGSPICE_VERSION ngspice || exit 1
+    - git clone --depth=1 --single-branch --branch=$NGSPICE_VERSION --filter=blob:none https://git.code.sf.net/p/ngspice/ngspice.git ngspice || exit 1
     - docker build --build-context ngspice-src=ngspice --build-arg BASE_IMAGE=$CI_REGISTRY_IMAGE/base:latest -t $IMAGE_NAME -f docker/Dockerfile.ngspice .
     - docker tag $IMAGE_NAME $CI_REGISTRY_IMAGE/ngspice:latest
     - docker push $IMAGE_NAME
@@ -162,10 +165,6 @@ build-libs:
   script:
     - LIBS_DATE=$(date +%Y%m%d)
     - LIBS_TAG="libs-$LIBS_DATE"
-    - IMAGE_NAME="$CI_REGISTRY_IMAGE/libs:$LIBS_TAG"
-    # Check if today's libraries are already built
-    - |
-      if docker manifest inspect $IMAGE_NAME >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
         echo "Libraries for $LIBS_DATE already built, syncing latest tag (remote)"
         docker buildx imagetools create --tag "$CI_REGISTRY_IMAGE/libs:latest" "$IMAGE_NAME"
         exit 0
@@ -225,14 +224,16 @@ build-kicad:
   script:
     - echo "CI_REGISTRY_IMAGE is '$CI_REGISTRY_IMAGE'"
     - echo "Registry arg will be '$CI_REGISTRY_IMAGE'"
-    - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master} || exit 1
+    - git clone --branch=${KICAD_BRANCH:-master} --single-branch --depth=1 --filter=blob:none https://gitlab.com/kicad/code/kicad.git || exit 1
     - git clone https://github.com/sethhillbrand/appimage-builder.git && git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse || exit 1
     - docker buildx build
       --progress=plain --build-context kicad-src=kicad
       --build-context appimage-builder-src=appimage-builder
       --build-arg REGISTRY=$CI_REGISTRY_IMAGE
       --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
-      --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d)
+      --build-arg KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE}
+      --build-arg KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION}
+      --build-arg KICAD_BUILD_TYPE=${KICAD_BUILD_TYPE}
       --platform linux/amd64
       --target build-kicad
       --cache-to type=registry,ref=$CI_REGISTRY_IMAGE/cache:buildcache,mode=max
@@ -265,14 +266,16 @@ build-kicad-light:
   script:
     - echo "CI_REGISTRY_IMAGE is '$CI_REGISTRY_IMAGE'"
     - echo "Registry arg will be '$CI_REGISTRY_IMAGE'"
-    - git clone --shallow-since="60 days ago" https://gitlab.com/kicad/code/kicad.git --branch=${KICAD_BRANCH:-master} || exit 1
+    - git clone --branch=${KICAD_BRANCH:-master} --single-branch --depth=1 --filter=blob:none https://gitlab.com/kicad/code/kicad.git || exit 1
     - git clone https://github.com/sethhillbrand/appimage-builder.git && git --work-tree=./appimage-builder --git-dir=./appimage-builder/.git checkout fix-packaging-version-parse || exit 1
     - docker buildx build
       --progress=plain --build-context kicad-src=kicad
       --build-context appimage-builder-src=appimage-builder
       --build-arg REGISTRY=$CI_REGISTRY_IMAGE
       --build-arg BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
-      --build-arg KICAD_BUILD_RELEASE=nightly-$(date +%Y%m%d)
+      --build-arg KICAD_BUILD_RELEASE=${KICAD_BUILD_RELEASE}
+      --build-arg KICAD_BUILD_MAJVERSION=${KICAD_BUILD_MAJVERSION}
+      --build-arg KICAD_BUILD_TYPE=${KICAD_BUILD_TYPE}
       --platform linux/amd64
       --target build-kicad-light
       --cache-from type=registry,ref=$CI_REGISTRY_IMAGE/cache:buildcache
