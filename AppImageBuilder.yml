@@ -14,17 +14,17 @@ AppDir:
   apt:
     arch: amd64
     sources:
-      - sourceline: 'deb http://ftp.debian.org/debian/ bookworm contrib main'
-        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0E98404D386FA1D9'
-      - sourceline: 'deb http://ftp.debian.org/debian/ bookworm-updates contrib main'
-        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x0E98404D386FA1D9'
-      - sourceline: 'deb http://security.debian.org/debian-security/ bookworm-security contrib main'
-        key_url: 'http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x54404762BBB6E853'
+      - sourceline: 'deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] https://deb.debian.org/debian bookworm main contrib'
+      - sourceline: 'deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] https://deb.debian.org/debian bookworm-updates main contrib'
+      - sourceline: 'deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] https://security.debian.org/debian-security bookworm-security main contrib'
 
     include:
       - bash
       - dash
+      - debian-archive-keyring
+      - ca-certificates
       - git
+      - gnupg
       - librsvg2-common # gdk-pixbuf
       - sudo
 
