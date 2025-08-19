@@ -71,7 +71,7 @@ build-base:
     - IMAGE_NAME="$CI_REGISTRY_IMAGE/base:$BASE_TAG"
     # Check if we need to rebuild
     - |
-      if docker manifest inspect $CI_REGISTRY_IMAGE/base:latest >/dev/null 2>&1 && [ "$FORCE_REBUILD" != "true" ]; then
+      if docker manifest inspect $CI_REGISTRY_IMAGE/base:latest >/dev/null 2>&1 && [ "$FORCE_REBUILD_BASE" != "true" ]; then
         echo "Base image exists and no forced rebuild, skipping"
         exit 0
       fi
